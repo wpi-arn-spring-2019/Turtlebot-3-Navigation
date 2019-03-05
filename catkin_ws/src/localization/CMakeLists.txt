@@ -7,6 +7,8 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+find_package(Eigen3 REQUIRED)
+find_package(PCL REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
@@ -119,6 +121,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
   include/localization
+  ${PCL_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -150,6 +153,8 @@ add_executable(${PROJECT_NAME}_node src/localization_node.cpp src/localization.c
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
    ${catkin_LIBRARIES}
+   Eigen3::Eigen
+   ${PCL_LIBRARIES}
 )
 
 #############
