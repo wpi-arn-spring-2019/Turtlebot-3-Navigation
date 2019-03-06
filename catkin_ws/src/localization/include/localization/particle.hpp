@@ -1,0 +1,20 @@
+#pragma once
+#include <tf/tf.h>
+
+namespace Turtlebot
+{
+
+struct Particle
+{
+    Particle(const tf::Pose &pose_, const double &weight_) :
+             pose(pose_), weight(weight_)
+             {}
+    ~Particle() = default;
+
+    tf::Pose pose;
+    double weight;
+
+
+};
+
+}
