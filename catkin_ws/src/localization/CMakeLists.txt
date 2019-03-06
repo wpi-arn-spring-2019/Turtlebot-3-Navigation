@@ -11,6 +11,7 @@ find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
+  laser_geometry
   nav_msgs
   roscpp
   sensor_msgs
@@ -109,7 +110,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include/localization
 #  LIBRARIES localization
-  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp sensor_msgs tf
+  CATKIN_DEPENDS geometry_msgs laser_geometry nav_msgs roscpp sensor_msgs tf
 #  DEPENDS system_lib
 )
 
