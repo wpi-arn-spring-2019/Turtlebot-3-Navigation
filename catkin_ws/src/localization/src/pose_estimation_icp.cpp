@@ -3,16 +3,6 @@
 namespace Turtlebot
 {
 
-PoseEstimationICP::PoseEstimationICP(ros::NodeHandle &pnh)
-{
-
-}
-
-PoseEstimationICP::~PoseEstimationICP()
-{
-
-}
-
 const Eigen::Matrix4f PoseEstimationICP::getTransform(const sensor_msgs::LaserScan &source_scan, const sensor_msgs::LaserScan &target_scan)
 {
     const PointCloud::Ptr &source_cloud = convertToPCL(source_scan);
@@ -29,7 +19,6 @@ const PointCloud::Ptr PoseEstimationICP::convertToPCL(const sensor_msgs::LaserSc
     pcl::fromROSMsg(cloud, *pcloud);
     return pcloud;
 }
-
 
 const Eigen::Matrix4f PoseEstimationICP::calcTransformICP(const PointCloud::Ptr &source_cloud, const PointCloud::Ptr &target_cloud)
 {

@@ -22,8 +22,8 @@ namespace Turtlebot
 class PoseEstimationICP
 {
 public:
-    PoseEstimationICP(ros::NodeHandle &pnh);
-    ~PoseEstimationICP();
+    PoseEstimationICP(){}
+    ~PoseEstimationICP(){}
 
     const Eigen::Matrix4f getTransform(const sensor_msgs::LaserScan &source_scan, const sensor_msgs::LaserScan &target_scan);
 
