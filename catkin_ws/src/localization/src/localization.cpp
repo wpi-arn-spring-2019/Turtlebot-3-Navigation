@@ -39,9 +39,10 @@ void Localization::Localize()
 
 void Localization::initializeLocalization()
 {
+    const std::vector<Point> open_points = getFreeSpace();
     for(int particle_it = 0; particle_it < m_num_particles; particle_it++)
     {
-
+        getRandomParticle(open_points);
     }
 }
 
