@@ -3,6 +3,7 @@
 #include <fake_scan.hpp>
 #include <geometry_msgs/Pose.h>
 #include <particle.hpp>
+#include <point.hpp>
 #include <pose_estimation_icp.hpp>
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/Odometry.h>
@@ -24,7 +25,9 @@ public:
 private:
     void laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
-    void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);        
+    void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
+    void initializeLocalization();
+    const std::vector<Point> getFreeSpace();
     const std::deque<Particle> sampleParticles();
     void takeActionParticles(std::deque<Particle> &particles);
     void calcParticleWeights(std::deque<Particle> &particles);

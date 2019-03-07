@@ -36,6 +36,19 @@ void Localization::Localize()
     setPreviousPose(final_tf);
 }
 
+void Localization::initializeLocalization()
+{
+    for(int particle_it = 0; particle_it < m_num_particles; particle_it++)
+    {
+
+    }
+}
+
+const std::vector<Point> Localization::getFreeSpace()
+{
+
+}
+
 const std::deque<Particle> Localization::sampleParticles()
 {
     std::srand(ros::Time::now().toSec());
