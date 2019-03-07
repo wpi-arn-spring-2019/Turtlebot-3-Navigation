@@ -11,6 +11,11 @@ struct Particle
              {}
     ~Particle() = default;
 
+    bool operator<(const Particle &rhs) const
+    {
+        return rhs.weight < weight;
+    }
+
     tf::Pose pose;
     double weight;
 

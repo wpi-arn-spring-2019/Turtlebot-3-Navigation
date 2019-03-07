@@ -10,6 +10,7 @@
 #include <pcl/registration/warp_point_rigid_3d.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <tf/tf.h>
 
 typedef pcl::PointXYZ Point;
 typedef pcl::PointCloud<Point> PointCloud;
@@ -25,11 +26,12 @@ public:
     PoseEstimationICP(){}
     ~PoseEstimationICP(){}
 
-    const Eigen::Matrix4f getTransform(const sensor_msgs::LaserScan &source_scan, const sensor_msgs::LaserScan &target_scan);
+    const tf::Pose getTransform(const sensor_msgs::LaserScan &source_scan, const sensor_msgs::LaserScan &target_scan);
 
 private:
     const PointCloud::Ptr convertToPCL(const sensor_msgs::LaserScan &scan);
     const Eigen::Matrix4f calcTransformICP(const PointCloud::Ptr &source_cloud, const PointCloud::Ptr &target_cloud);
+    const tf::Pose convertMatrixToPose(const Eigen::Matrix4f &mat);
 
     laser_geometry::LaserProjection m_projector;
 

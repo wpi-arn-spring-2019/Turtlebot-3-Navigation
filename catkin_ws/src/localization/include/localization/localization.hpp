@@ -19,13 +19,20 @@ class Localization
 public:
     Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh);
     ~Localization();
+    void Localize();
 
 private:
     void laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
-    void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
-    const std::vector<Particle> sampleParticles();
-    void takeActionParticles(std::vector<Particle> &particles);
+    void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);        
+    const std::deque<Particle> sampleParticles();
+    void takeActionParticles(std::deque<Particle> &particles);
+    void calcParticleWeights(std::deque<Particle> &particles);
+    const double calcDistanceScore(const tf::Point &particle_pt, const tf::Point &sensor_pt);
+    const double calcRotationScore(const tf::Quaternion &particle_q, const tf::Quaternion &sensor_q);
+    void pruneAndNormalizeParticles();
+    const tf::StampedTransform calcFinalTransform();
+    void setPreviousPose(const tf::StampedTransform &transform);
 
     ros::Subscriber m_scan_sub;
     ros::Subscriber m_odom_sub;
@@ -33,10 +40,10 @@ private:
     tf::TransformBroadcaster m_broad;
 
     PoseEstimationICP *m_pose_icp;
+    FakeScan *m_fake_scan;
 
-    std::vector<Particle> m_particles;
-
-
+    std::deque<Particle> m_particles;
+    geometry_msgs::Pose m_prev_pose;
 
     sensor_msgs::LaserScan::ConstPtr m_scan;
     nav_msgs::Odometry::ConstPtr m_odom;
@@ -47,6 +54,9 @@ private:
 
 
     int m_num_particles;
+    double m_percent_to_drop;
+    double m_percent_to_average;
+
 
 };
 

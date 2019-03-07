@@ -3,11 +3,11 @@
 namespace Turtlebot
 {
 
-const Eigen::Matrix4f PoseEstimationICP::getTransform(const sensor_msgs::LaserScan &source_scan, const sensor_msgs::LaserScan &target_scan)
+const tf::Pose PoseEstimationICP::getTransform(const sensor_msgs::LaserScan &source_scan, const sensor_msgs::LaserScan &target_scan)
 {
     const PointCloud::Ptr &source_cloud = convertToPCL(source_scan);
     const PointCloud::Ptr &target_cloud = convertToPCL(target_scan);
-    return calcTransformICP(source_cloud, target_cloud);
+    return convertMatrixToPose(calcTransformICP(source_cloud, target_cloud));
 }
 
 const PointCloud::Ptr PoseEstimationICP::convertToPCL(const sensor_msgs::LaserScan &scan)
@@ -31,6 +31,22 @@ const Eigen::Matrix4f PoseEstimationICP::calcTransformICP(const PointCloud::Ptr 
     PointCloud::Ptr out_cloud(new PointCloud);
     icp.align(*out_cloud);
     return icp.getFinalTransformation();
+}
+
+const tf::Pose PoseEstimationICP::convertMatrixToPose(const Eigen::Matrix4f &mat)
+{
+    tf::Pose pose;
+    pose.getOrigin().setX(mat(0, 3));
+    pose.getOrigin().setY(mat(1, 3));
+    pose.getOrigin().setZ(mat(2, 3));
+    tf::Matrix3x3 tf_mat;
+    tf_mat.setValue(mat(0, 0), mat(0, 1), mat(0, 2),
+                    mat(1, 0), mat(1, 1), mat(1, 2),
+                    mat(2, 0), mat(2, 1), mat(2, 2));
+    tf::Quaternion q;
+    tf_mat.getRotation(q);
+    pose.setRotation(q);
+    return pose;
 }
 
 }

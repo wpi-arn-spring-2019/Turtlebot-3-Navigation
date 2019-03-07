@@ -5,7 +5,6 @@
 #include <sensor_msgs/LaserScan.h>
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
-#include <localization.hpp>
 
 namespace Turtlebot
 {

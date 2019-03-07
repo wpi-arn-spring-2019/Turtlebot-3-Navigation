@@ -17,6 +17,8 @@ int main(int argc, char **argv)
     {
         ros::spinOnce();
 
+        loc.Localize();
+
         rate.sleep();
     }
 
