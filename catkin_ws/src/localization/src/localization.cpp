@@ -26,6 +26,7 @@ void Localization::Localize()
     {
         return;
     }
+    initializeLocalization();
     std::deque<Particle> particles = sampleParticles();
     takeActionParticles(particles);
     calcParticleWeights(particles);
@@ -33,7 +34,7 @@ void Localization::Localize()
     pruneAndNormalizeParticles();
     tf::StampedTransform final_tf = calcFinalTransform();
     m_broad.sendTransform(final_tf);
-    setPreviousPose(final_tf);
+    setPreviousPose(final_tf);  
 }
 
 void Localization::initializeLocalization()
@@ -46,7 +47,38 @@ void Localization::initializeLocalization()
 
 const std::vector<Point> Localization::getFreeSpace()
 {
+    std::vector<Point> points;
+    for(int point_it = 0; point_it < m_map->data.size(); point_it++)
+    {
+        if(int(m_map->data[point_it]) == 0)
+        {
+            points.push_back(getMapCoords(point_it));
+        }
+    }
+}
 
+const Particle Localization::getRandomParticle(const std::vector<Point> &open_points)
+{
+    std::srand(ros::Time::now().toSec());
+    for(int particle_it = 0; particle_it < m_num_particles; particle_it++)
+    {
+       const int &rand_sample = std::rand() % open_points.size();
+       tf::Pose pose;
+       pose.getOrigin().setX(open_points[rand_sample].x);
+       pose.getOrigin().setY(open_points[rand_sample].y);
+       pose.getOrigin().setZ(0);
+       const double &yaw = rand_sample / open_points.size() * 2 * M_PI;
+       pose.setRotation(tf::createQuaternionFromYaw(yaw));
+    }
+}
+
+const Point Localization::getMapCoords(const int &location)
+{
+    const int &height = m_map->info.height;
+    const double &resolution = m_map->info.resolution;
+    const double &x = location % height / resolution;
+    const double &y = int(location / height) / resolution;
+    return Point(x, y);
 }
 
 const std::deque<Particle> Localization::sampleParticles()

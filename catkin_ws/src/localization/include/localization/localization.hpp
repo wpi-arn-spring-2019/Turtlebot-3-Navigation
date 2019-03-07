@@ -28,6 +28,8 @@ private:
     void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
     void initializeLocalization();
     const std::vector<Point> getFreeSpace();
+    const Particle getRandomParticle(const std::vector<Point> &open_points);
+    const Point getMapCoords(const int &location);
     const std::deque<Particle> sampleParticles();
     void takeActionParticles(std::deque<Particle> &particles);
     void calcParticleWeights(std::deque<Particle> &particles);
