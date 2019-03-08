@@ -37,7 +37,9 @@ private:
     const double calcRotationScore(const tf::Quaternion &particle_q, const tf::Quaternion &sensor_q);
     void pruneAndNormalizeParticles();
     const tf::StampedTransform calcFinalTransform();
+    void integratePoseToCurrentTime();
     void setPreviousPose(const tf::StampedTransform &transform);
+    void integrateOdomToScanTime();
 
     ros::Subscriber m_scan_sub;
     ros::Subscriber m_odom_sub;
@@ -54,8 +56,10 @@ private:
     sensor_msgs::LaserScan m_prev_scan;
     bool m_have_scan = false;
     nav_msgs::Odometry::ConstPtr m_odom;
-    nav_msgs::Odometry::ConstPtr m_odom_at_scan;
-    nav_msgs::Odometry::ConstPtr m_odom_at_last_scan;
+    nav_msgs::Odometry::ConstPtr m_prev_odom;
+    bool m_have_odom = false;
+    nav_msgs::Odometry m_odom_at_scan;
+    nav_msgs::Odometry m_odom_at_last_scan;
     bool m_have_map = false;
     nav_msgs::OccupancyGrid::ConstPtr m_map;
     bool m_initialized = false;

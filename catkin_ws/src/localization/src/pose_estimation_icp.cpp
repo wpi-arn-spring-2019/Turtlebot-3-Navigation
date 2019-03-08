@@ -45,6 +45,7 @@ const tf::Pose PoseEstimationICP::convertMatrixToPose(const Eigen::Matrix4f &mat
                     mat(2, 0), mat(2, 1), mat(2, 2));
     tf::Quaternion q;
     tf_mat.getRotation(q);
+    q.normalize();
     pose.setRotation(q);
     return pose;
 }
