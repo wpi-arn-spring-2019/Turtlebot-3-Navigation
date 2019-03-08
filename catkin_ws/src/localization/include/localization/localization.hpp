@@ -51,11 +51,14 @@ private:
     geometry_msgs::Pose m_prev_pose;
 
     sensor_msgs::LaserScan::ConstPtr m_scan;
+    sensor_msgs::LaserScan m_prev_scan;
+    bool m_have_scan = false;
     nav_msgs::Odometry::ConstPtr m_odom;
     nav_msgs::Odometry::ConstPtr m_odom_at_scan;
     nav_msgs::Odometry::ConstPtr m_odom_at_last_scan;
     bool m_have_map = false;
     nav_msgs::OccupancyGrid::ConstPtr m_map;
+    bool m_initialized = false;
 
 
     int m_num_particles;

@@ -26,20 +26,33 @@ void Localization::Localize()
     {
         return;
     }
-    initializeLocalization();
+    ROS_INFO_STREAM(1);
+    if(!m_initialized)
+    {
+        initializeLocalization();
+        m_initialized = true;
+    }
+        ROS_INFO_STREAM(2);
     std::deque<Particle> particles = sampleParticles();
+        ROS_INFO_STREAM(3);
     takeActionParticles(particles);
+        ROS_INFO_STREAM(4);
     calcParticleWeights(particles);
+        ROS_INFO_STREAM(5);
     m_particles = particles;
+        ROS_INFO_STREAM(6);
     pruneAndNormalizeParticles();
+        ROS_INFO_STREAM(7);
     tf::StampedTransform final_tf = calcFinalTransform();
+        ROS_INFO_STREAM(8);
     m_broad.sendTransform(final_tf);
+        ROS_INFO_STREAM(9);
     setPreviousPose(final_tf);  
 }
 
 void Localization::initializeLocalization()
 {
-    const std::vector<Point> open_points = getFreeSpace();
+    const std::vector<Point> &open_points = getFreeSpace();
     for(int particle_it = 0; particle_it < m_num_particles; particle_it++)
     {
         getRandomParticle(open_points);
@@ -61,9 +74,10 @@ const std::vector<Point> Localization::getFreeSpace()
 const Particle Localization::getRandomParticle(const std::vector<Point> &open_points)
 {
     std::srand(ros::Time::now().toSec());
+           ROS_INFO_STREAM(open_points.size() << " " << m_map->data.size());
     for(int particle_it = 0; particle_it < m_num_particles; particle_it++)
     {
-       const int &rand_sample = std::rand() % open_points.size();
+       const int &rand_sample = std::rand() % int(open_points.size());
        tf::Pose pose;
        pose.getOrigin().setX(open_points[rand_sample].x);
        pose.getOrigin().setY(open_points[rand_sample].y);
@@ -136,7 +150,8 @@ void Localization::takeActionParticles(std::deque<Particle> &particles)
 
 void Localization::calcParticleWeights(std::deque<Particle> &particles)
 {
-    const sensor_msgs::LaserScan &fake_scan = m_fake_scan->getFakeScan(m_prev_pose);
+    const sensor_msgs::LaserScan &fake_scan = m_prev_scan;// m_fake_scan->getFakeScan(m_prev_pose);
+    m_prev_scan = *m_scan;
     const tf::Pose &sensor_pose_estimate = m_pose_icp->getTransform(fake_scan, *m_scan);
     for(auto &particle : particles)
     {
@@ -233,6 +248,11 @@ void Localization::setPreviousPose(const tf::StampedTransform &transform)
 
 void Localization::laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg)
 {
+    if(!m_have_scan)
+    {
+        m_have_scan = true;
+        m_prev_scan = *msg;
+    }
     m_scan = msg;
     m_odom_at_scan = m_odom;
 }
