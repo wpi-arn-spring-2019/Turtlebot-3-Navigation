@@ -1,17 +1,26 @@
 #pragma once
 #include <ros/ros.h>
+#include <boost/random.hpp>
+#include <boost/random/normal_distribution.hpp>
 #include <fake_scan.hpp>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <particle.hpp>
 #include <point.hpp>
 #include <pose_estimation_icp.hpp>
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/LaserScan.h>
+#include <time.h>
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
+#include <tf/transform_listener.h>
 #include <visualization_msgs/MarkerArray.h>
+
+typedef boost::normal_distribution<> GaussianDistribution;
+typedef boost::mt19937 RandomGenerator;
+typedef boost::variate_generator<RandomGenerator, GaussianDistribution> GaussianGenerator;
 
 namespace Turtlebot
 {
@@ -27,6 +36,7 @@ private:
     void laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
     void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
+    void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void initializeLocalization();
     const std::vector<Point> getFreeSpace();
     const Particle getRandomParticle(const std::vector<Point> &open_points);
@@ -46,8 +56,10 @@ private:
     ros::Subscriber m_scan_sub;
     ros::Subscriber m_odom_sub;
     ros::Subscriber m_map_sub;
+    ros::Subscriber m_pose_sub;
     ros::Publisher m_particle_pub;
     tf::TransformBroadcaster m_broad;
+    tf::TransformListener m_list;
 
     PoseEstimationICP *m_pose_icp;
     FakeScan *m_fake_scan;
@@ -66,7 +78,11 @@ private:
     bool m_have_map = false;
     nav_msgs::OccupancyGrid::ConstPtr m_map;
     bool m_initialized = false;
+    bool m_have_pose_estimate = false;
 
+    GaussianGenerator *m_gen_x;
+    GaussianGenerator *m_gen_y;
+    GaussianGenerator *m_gen_yaw;
 
     int m_num_particles;
     double m_percent_to_drop;
