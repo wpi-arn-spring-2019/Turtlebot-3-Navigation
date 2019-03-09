@@ -175,7 +175,7 @@ const double Localization::calcRotationScore(const tf::Quaternion &particle_q, c
     double d_yaw = yaw_p - yaw_s;
     if(fabs(d_yaw) <= 0.01)
     {
-        d_yaw = 0.01;
+        d_yaw = 0.001;
     }
     return 1.0 / fabs(d_yaw);
 }
