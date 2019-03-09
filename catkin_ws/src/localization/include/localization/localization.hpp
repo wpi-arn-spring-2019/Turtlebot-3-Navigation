@@ -11,6 +11,7 @@
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
+#include <visualization_msgs/MarkerArray.h>
 
 namespace Turtlebot
 {
@@ -37,6 +38,7 @@ private:
     const double calcRotationScore(const tf::Quaternion &particle_q, const tf::Quaternion &sensor_q);
     void pruneAndNormalizeParticles();
     const tf::StampedTransform calcFinalTransform();
+    void pubParticles();
     void integratePoseToCurrentTime();
     void setPreviousPose(const tf::StampedTransform &transform);
     void integrateOdomToScanTime();
@@ -44,6 +46,7 @@ private:
     ros::Subscriber m_scan_sub;
     ros::Subscriber m_odom_sub;
     ros::Subscriber m_map_sub;
+    ros::Publisher m_particle_pub;
     tf::TransformBroadcaster m_broad;
 
     PoseEstimationICP *m_pose_icp;

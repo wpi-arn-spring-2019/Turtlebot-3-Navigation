@@ -8,10 +8,12 @@ Localization::Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_scan_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 10, &Localization::laserScanCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom", 10, &Localization::odomCallback, this);
     m_map_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, &Localization::mapCallback, this);
+    m_particle_pub = nh.advertise<visualization_msgs::MarkerArray>("/particles", 1);
     m_pose_icp = new PoseEstimationICP;
     pnh.getParam("num_particles", m_num_particles);
     pnh.getParam("percent_to_drop", m_percent_to_drop);
     pnh.getParam("percent_to_average", m_percent_to_average);
+    std::srand(ros::Time::now().toSec());
 }
 
 Localization::~Localization()
@@ -35,6 +37,7 @@ void Localization::Localize()
     takeActionParticles(particles);
     calcParticleWeights(particles);
     m_particles = particles;
+    pubParticles();
     pruneAndNormalizeParticles();
     tf::StampedTransform final_tf = calcFinalTransform();
     m_broad.sendTransform(final_tf);
@@ -64,44 +67,43 @@ const std::vector<Point> Localization::getFreeSpace()
 }
 
 const Particle Localization::getRandomParticle(const std::vector<Point> &open_points)
-{
-    std::srand(ros::Time::now().toSec());
+{    
     const int &rand_sample = std::rand() % open_points.size();
     tf::Pose pose;
-    pose.getOrigin().setX(open_points[rand_sample].x);
-    pose.getOrigin().setY(open_points[rand_sample].y);
-    pose.getOrigin().setZ(0);
-    const double &yaw = rand_sample / open_points.size() * 2 * M_PI;
+    const double &x = open_points[rand_sample].x;
+    const double &y = open_points[rand_sample].y;
+    pose.setOrigin(tf::Vector3(x, y, 0));
+    const double &yaw = double(rand_sample) / open_points.size() * 2 * M_PI;
     pose.setRotation(tf::createQuaternionFromYaw(yaw));
-    return Particle(pose, 1 / m_num_particles);
+    return Particle(pose, 1.0 / m_num_particles);
 }
 
 const Point Localization::getMapCoords(const int &location)
 {
     const int &height = m_map->info.height;
+    const int &width = m_map->info.width;
     const double &resolution = m_map->info.resolution;
-    const double &x = location % height / resolution;
-    const double &y = int(location / height) / resolution;
+    const double &x = (location % height - height / 2) * resolution;
+    const double &y = int(location / height - width / 2) * resolution;
     return Point(x, y);
 }
 
 const std::deque<Particle> Localization::sampleParticles()
 {
-    std::srand(ros::Time::now().toSec());
     std::deque<Particle> sampled_particles;
     for(int sample_id = 0; sample_id < m_num_particles; sample_id++)
     {
-        double rand_sample = (std::rand() % 1000) / 1000;
+        double rand_sample = double(std::rand() % 1000) / 1000;
         for(const auto &particle : m_particles)
         {
             rand_sample -= particle.weight;
-            if(rand_sample <= 0)
+            if(rand_sample <= 0.0)
             {
                 sampled_particles.push_back(particle);
                 break;
             }
         }
-    }
+    }    
     return sampled_particles;
 }
 
@@ -146,7 +148,7 @@ void Localization::calcParticleWeights(std::deque<Particle> &particles)
     {
         const double &distance_score = calcDistanceScore(particle.pose.getOrigin(), sensor_pose_estimate.getOrigin());
         const double &rotation_score = calcRotationScore(particle.pose.getRotation(), sensor_pose_estimate.getRotation());
-        const double &weight = distance_score + rotation_score;
+        const double &weight = distance_score + rotation_score;        
         particle.weight = weight;
     }
     std::sort(particles.begin(), particles.end());    
@@ -162,20 +164,20 @@ const double Localization::calcDistanceScore(const tf::Point &particle_pt, const
     {
         dist = 0.001;
     }
-    return 1 / dist;
+    return 1.0 / dist;
 }
 
 const double Localization::calcRotationScore(const tf::Quaternion &particle_q, const tf::Quaternion &sensor_q)
-{
-    tf::Quaternion dq = particle_q - sensor_q;
-    dq.normalize();
-    double roll, pitch, yaw;
-    tf::Matrix3x3(dq).getRPY(roll, pitch, yaw);
-    if(fabs(yaw) <= 0.01)
+{    
+    double roll, pitch, yaw_p, yaw_s;
+    tf::Matrix3x3(particle_q).getRPY(roll, pitch, yaw_p);
+    tf::Matrix3x3(sensor_q).getRPY(roll, pitch, yaw_s);
+    double d_yaw = yaw_p - yaw_s;
+    if(fabs(d_yaw) <= 0.01)
     {
-        yaw = 0.01;
+        d_yaw = 0.01;
     }
-    return 1 / fabs(yaw);
+    return 1.0 / fabs(d_yaw);
 }
 
 void Localization::pruneAndNormalizeParticles()
@@ -216,11 +218,44 @@ const tf::StampedTransform Localization::calcFinalTransform()
     yaw = yaw / num_particles_to_average;
     tf::StampedTransform transform;
     transform.stamp_ = ros::Time::now();
-    transform.child_frame_id_ = "/base_link";
+    transform.child_frame_id_ = "/base_footprint";
     transform.frame_id_ = "/map";
     transform.setOrigin(tf::Vector3(x, y, 0));
     transform.setRotation(tf::createQuaternionFromYaw(yaw));
     return transform;
+}
+
+void Localization::pubParticles()
+{
+    visualization_msgs::MarkerArray marker_arr;
+    ros::Time stamp = ros::Time::now();
+    int id = 0;
+    for(const auto &particle : m_particles)
+    {
+        visualization_msgs::Marker marker;
+        marker.header.frame_id = "/map";
+        marker.header.stamp = stamp;
+        marker.id = id;
+        id++;
+        marker.action = visualization_msgs::Marker::ADD;
+        marker.type = visualization_msgs::Marker::SPHERE;
+        marker.pose.position.x = particle.pose.getOrigin().getX();
+        marker.pose.position.y = particle.pose.getOrigin().getY();
+        marker.pose.position.z = 0;
+        marker.pose.orientation.w = 1;
+        marker.pose.orientation.x = 0;
+        marker.pose.orientation.y = 0;
+        marker.pose.orientation.z = 0;
+        marker.scale.x = 0.01;
+        marker.scale.y = 0.01;
+        marker.scale.z = 0.01;
+        marker.color.a = 1.0;
+        marker.color.r = 0;
+        marker.color.g = 0;
+        marker.color.b = 1.0;
+        marker_arr.markers.push_back(marker);
+    }
+    m_particle_pub.publish(marker_arr);
 }
 
 void Localization::integratePoseToCurrentTime()
@@ -280,7 +315,6 @@ void Localization::integrateOdomToScanTime()
     m_odom_at_scan.pose.pose.orientation.x = q_f.getX();
     m_odom_at_scan.pose.pose.orientation.y = q_f.getY();
     m_odom_at_scan.pose.pose.orientation.z = q_f.getZ();
-    ROS_INFO_STREAM(x_f << " " << y_f);
 }
 
 void Localization::laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg)

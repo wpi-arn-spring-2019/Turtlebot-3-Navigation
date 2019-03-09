@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   tf
+  visualization_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -110,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include/localization
 #  LIBRARIES localization
-  CATKIN_DEPENDS geometry_msgs laser_geometry nav_msgs roscpp sensor_msgs tf
+  CATKIN_DEPENDS geometry_msgs laser_geometry nav_msgs roscpp sensor_msgs tf visualization_msgs
 #  DEPENDS system_lib
 )
 
