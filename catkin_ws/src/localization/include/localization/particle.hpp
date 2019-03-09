@@ -13,7 +13,7 @@ struct Particle
 
     bool operator<(const Particle &rhs) const
     {
-        return rhs.weight < weight;
+        return rhs.weight > weight;
     }
 
     tf::Pose pose;
