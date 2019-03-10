@@ -10,6 +10,7 @@ Localization::Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_map_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, &Localization::mapCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1, &Localization::poseCallback, this);
     m_particle_pub = nh.advertise<visualization_msgs::MarkerArray>("/particles", 1);
+    m_scan_pub = nh.advertise<sensor_msgs::LaserScan>("/fake_scan", 1);
     m_pose_icp = new PoseEstimationICP;
     pnh.getParam("num_particles", m_num_particles);
     pnh.getParam("percent_to_drop", m_percent_to_drop);
@@ -149,7 +150,8 @@ void Localization::takeActionParticles(std::deque<Particle> &particles)
 
 void Localization::calcParticleWeights(std::deque<Particle> &particles)
 {
-    const sensor_msgs::LaserScan &fake_scan = m_prev_scan;// m_fake_scan->getFakeScan(m_prev_pose);
+    const sensor_msgs::LaserScan &fake_scan = m_fake_scan->getFakeScan(m_prev_pose);
+    m_scan_pub.publish(fake_scan);
     m_prev_scan = *m_scan;
     tf::Pose prev_pose;
     prev_pose.setOrigin(tf::Vector3(m_prev_pose.position.x, m_prev_pose.position.y, 0));
@@ -336,10 +338,11 @@ void Localization::integrateOdomToScanTime()
 
 void Localization::laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg)
 {    
-    if(!m_have_scan && m_have_odom)
+    if(!m_have_scan && m_have_odom && m_have_map)
     {
         m_have_scan = true;
         m_prev_scan = *msg;
+        m_fake_scan = new FakeScan(*m_map, *msg);
         m_odom_at_last_scan = *m_odom;
     }
     m_scan = msg;
@@ -371,8 +374,7 @@ void Localization::mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
 {
     if(!m_have_map)
     {
-        m_have_map = true;
-        m_fake_scan = new FakeScan(*msg);
+        m_have_map = true;        
         m_map = msg;
     }
 }

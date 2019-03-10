@@ -58,6 +58,7 @@ private:
     ros::Subscriber m_map_sub;
     ros::Subscriber m_pose_sub;
     ros::Publisher m_particle_pub;
+    ros::Publisher m_scan_pub;
     tf::TransformBroadcaster m_broad;
     tf::TransformListener m_list;
 

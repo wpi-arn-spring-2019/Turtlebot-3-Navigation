@@ -5,6 +5,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
+#include <point.hpp>
 
 namespace Turtlebot
 {
@@ -12,27 +13,19 @@ namespace Turtlebot
 class FakeScan
 {
 public:
-    FakeScan(const nav_msgs::OccupancyGrid &map) : m_map(map){}
+    FakeScan(const nav_msgs::OccupancyGrid &map, const sensor_msgs::LaserScan &scan);
     ~FakeScan(){}
 
     const sensor_msgs::LaserScan getFakeScan(const geometry_msgs::Pose &pose);
 
 private:
-
+    void convertMatrix();
+    double laserThrower(const geometry_msgs::Pose &pose, const float &inc);
+    void writeScan(const double &dist, sensor_msgs::LaserScan &scan);
+    std::vector<std::vector<int>> m_matrix_map;
 
     nav_msgs::OccupancyGrid m_map;
-//    void laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg);
-//    void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
-
-//    ros::Subscriber m_scan_sub;
-//    ros::Subscriber m_map_sub;
-//    tf::TransformBroadcaster m_broad;
-
-
-//    sensor_msgs::LaserScan::ConstPtr m_scan;
-
-//    bool m_have_map = false;
-//    nav_msgs::OccupancyGrid::ConstPtr m_map;
+    sensor_msgs::LaserScan m_scan;
 
 
 };
