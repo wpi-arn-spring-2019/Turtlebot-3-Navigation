@@ -2,22 +2,12 @@
 
 namespace Turtlebot
 {
-FakeScan::FakeScan(const nav_msgs::OccupancyGrid &map,  const sensor_msgs::LaserScan &scan) : m_map(map) , m_scan(scan)
-{
-    m_matrix_map.resize(m_map.info.height);
-    for(int a = 0; a < m_map.info.height; a++)
-    {
-        m_matrix_map[a].resize(m_map.info.width);
-    }
-    convertMatrix();
-}
-
 
 const sensor_msgs::LaserScan FakeScan::getFakeScan(const geometry_msgs::Pose &pose)
 {
     sensor_msgs::LaserScan scan = m_scan;
     scan.ranges.clear();
-    for(float inc = m_scan.angle_min; inc <= m_scan.angle_max; inc+= m_scan.angle_increment)
+    for(float inc = m_scan.angle_min; inc < m_scan.angle_max; inc+= m_scan.angle_increment)
     {
 
         const double &dist = laserThrower(pose, inc);
@@ -25,6 +15,7 @@ const sensor_msgs::LaserScan FakeScan::getFakeScan(const geometry_msgs::Pose &po
 
     }
     scan.header.stamp = ros::Time::now();
+    scan.header.frame_id = "fake_laser";
     return scan;
 }
 
@@ -37,24 +28,21 @@ void FakeScan::writeScan(const double &dist, sensor_msgs::LaserScan &scan)
 //    angle of scan
 }
 
-void FakeScan::convertMatrix()
+const int FakeScan::getLocation(const Point &pt)
 {
-    int location = 0;
-    const int &height = m_map.info.height;
-    for(const auto &val : m_map.data)
-    {
-        const int &x = int(location % height);
-        const int &y = int(location / height);
-        m_matrix_map[x][y] = int(val);
-        location++;
-    }
+    const double &resolution = m_map.info.resolution;
+    const double &height = m_map.info.height;
+    const double &origin_x = m_map.info.origin.position.x;
+    const double &origin_y = m_map.info.origin.position.y;
+    const int &x = (pt.x - origin_x) / resolution;
+    const int &y = (pt.y - origin_y) / resolution;
+    return x + y * height;
 }
 
 double FakeScan::laserThrower(const geometry_msgs::Pose &pose, const float &inc)
 {
 
     //////////////////////////////////////////////////////////////////////////////////
-
     //   modify this quaternion
     tf::Quaternion q;
     q.setW(pose.orientation.w);
@@ -63,20 +51,28 @@ double FakeScan::laserThrower(const geometry_msgs::Pose &pose, const float &inc)
     q.setZ(pose.orientation.z);
     double roll, pitch, yaw;
     tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-    double ray_dist = m_scan.range_min;   // find the minimum ray_dist and put it instead of zero
+    double ray_dist = 0;   // find the minimum ray_dist and put it instead of zero
     /////////////////////////////////////////////////////////////////////////////////////////
 
-    int  x = 0 , y = 0;
     double angle = yaw + inc;
 
-    while(m_matrix_map[x][y] != 100) {
-        x = int(m_map.info.height / 2  + (pose.position.x + ray_dist * cos(angle)) / m_map.info.resolution);
-        y = int(m_map.info.width / 2  + (pose.position.y + ray_dist * sin(angle)) / m_map.info.resolution);
-        ray_dist += 0.05;
+    const double &x = pose.position.x + ray_dist * cos(angle);
+    const double &y = pose.position.y + ray_dist * sin(angle);
+    Point pt(x, y);
+
+    while(int(m_map.data[getLocation(pt)]) != 100)
+    {
+        pt.x = pose.position.x + ray_dist * cos(angle);
+        pt.y = pose.position.y + ray_dist * sin(angle);
+        ray_dist += 0.01;
         if(ray_dist > m_scan.range_max)
         {
             return std::numeric_limits<double>::infinity();
         }
+    }
+    if(ray_dist < m_scan.range_min)
+    {
+        return m_scan.range_min;
     }
     return ray_dist;
 }

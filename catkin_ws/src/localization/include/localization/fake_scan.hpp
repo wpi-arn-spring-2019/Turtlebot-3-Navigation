@@ -13,7 +13,7 @@ namespace Turtlebot
 class FakeScan
 {
 public:
-    FakeScan(const nav_msgs::OccupancyGrid &map, const sensor_msgs::LaserScan &scan);
+    FakeScan(const nav_msgs::OccupancyGrid &map, const sensor_msgs::LaserScan &scan) : m_map(map), m_scan(scan){}
     ~FakeScan(){}
 
     const sensor_msgs::LaserScan getFakeScan(const geometry_msgs::Pose &pose);
@@ -21,6 +21,7 @@ public:
 private:
     void convertMatrix();
     double laserThrower(const geometry_msgs::Pose &pose, const float &inc);
+    const int getLocation(const Point &pt);
     void writeScan(const double &dist, sensor_msgs::LaserScan &scan);
     std::vector<std::vector<int>> m_matrix_map;
 
