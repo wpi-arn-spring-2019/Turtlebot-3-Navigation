@@ -83,6 +83,13 @@ private:
     GaussianGenerator *m_gen_s1;
     GaussianGenerator *m_gen_st;
     GaussianGenerator *m_gen_s2;
+    GaussianGenerator *m_gen_sens_x;
+    GaussianGenerator *m_gen_sens_y;
+    GaussianGenerator *m_gen_sens_yaw;
+
+    double m_sensor_var_x;
+    double m_sensor_var_y;
+    double m_sensor_var_yaw;
 
     int m_num_particles;
     double m_percent_to_drop;

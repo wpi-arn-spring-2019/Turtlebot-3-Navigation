@@ -1,2 +1,5 @@
-num_particles: 1000
-percent_to_drop: 10
+num_particles: 2500
+percent_to_drop: 0
+sensor_var_x: 0.01;
+sensor_var_y: 0.01;
+sensor_var_yaw: 0.001

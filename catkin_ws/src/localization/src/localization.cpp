@@ -13,6 +13,9 @@ Localization::Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_pose_icp = new PoseEstimationICP;
     pnh.getParam("num_particles", m_num_particles);
     pnh.getParam("percent_to_drop", m_percent_to_drop);
+    pnh.getParam("sensor_var_x", m_sensor_var_x);
+    pnh.getParam("sensor_var_y", m_sensor_var_y);
+    pnh.getParam("sensor_vary_aw", m_sensor_var_yaw);
     std::srand(ros::Time::now().toSec());
 }
 
@@ -23,6 +26,9 @@ Localization::~Localization()
     delete m_gen_s1;
     delete m_gen_st;
     delete m_gen_s2;
+    delete m_gen_sens_x;
+    delete m_gen_sens_y;
+    delete m_gen_sens_yaw;
 }
 
 void Localization::Localize()
@@ -149,7 +155,14 @@ void Localization::calcParticleWeights(std::deque<Particle> &particles)
     tf::Quaternion q;
     tf::quaternionMsgToTF(m_prev_pose.orientation, q);
     prev_pose.setRotation(q);
-    const tf::Pose &sensor_pose_estimate = prev_pose * m_pose_icp->getTransform(fake_scan, *m_scan);
+    tf::Pose sensor_pose_estimate = prev_pose * m_pose_icp->getTransform(fake_scan, *m_scan);
+    sensor_pose_estimate.setOrigin(tf::Vector3(sensor_pose_estimate.getOrigin().getX() + m_gen_sens_x->operator ()(),
+                                               sensor_pose_estimate.getOrigin().getY() + m_gen_sens_y->operator ()(),
+                                               0));
+    double roll, pitch, yaw;
+    tf::Matrix3x3(sensor_pose_estimate.getRotation()).getRPY(roll, pitch, yaw);
+    yaw += m_gen_sens_yaw->operator ()();
+    sensor_pose_estimate.setRotation(tf::createQuaternionFromYaw(yaw));
     for(auto &particle : particles)
     {
         const double &distance_score = calcDistanceScore(particle.pose.getOrigin(), sensor_pose_estimate.getOrigin());
@@ -339,16 +352,22 @@ void Localization::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
         RandomGenerator rng;
         rng.seed(ros::Time::now().toSec());
         const double &cov_trans = sqrt(msg->pose.covariance[0] + msg->pose.covariance[7]);
-        const double &cov_rot = std::sqrt(msg->pose.covariance[35]);
+        const double &cov_rot = std::sqrt(msg->pose.covariance[35] / 10);
         const double &cov_sigma_rot1 = cov_rot + cov_trans;
         const double &cov_sigma_trans = cov_trans + 2 * cov_rot;
         const double &cov_sigma_rot2 = cov_rot + cov_trans;
         GaussianDistribution s1(0.0, cov_sigma_rot1);
         GaussianDistribution st(0.0, cov_sigma_trans);
         GaussianDistribution s2(0.0, cov_sigma_rot2);
+        GaussianDistribution sens_x(0.0, std::sqrt(m_sensor_var_x));
+        GaussianDistribution sens_y(0.0, std::sqrt(m_sensor_var_y));
+        GaussianDistribution sens_yaw(0.0, std::sqrt(m_sensor_var_yaw));
         m_gen_s1 = new GaussianGenerator(rng, s1);
         m_gen_st = new GaussianGenerator(rng, st);
         m_gen_s2 = new GaussianGenerator(rng, s2);
+        m_gen_sens_x = new GaussianGenerator(rng, sens_x);
+        m_gen_sens_y = new GaussianGenerator(rng, sens_y);
+        m_gen_sens_yaw = new GaussianGenerator(rng, sens_yaw);
     }
     m_odom = msg;
 }
