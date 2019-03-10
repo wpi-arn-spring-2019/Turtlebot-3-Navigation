@@ -1,3 +1,2 @@
-num_particles: 100
-percent_to_drop: 30
-percent_to_average: 10
+num_particles: 1000
+percent_to_drop: 0

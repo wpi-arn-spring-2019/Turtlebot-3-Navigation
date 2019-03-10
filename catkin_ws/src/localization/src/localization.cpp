@@ -10,11 +10,9 @@ Localization::Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_map_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, &Localization::mapCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1, &Localization::poseCallback, this);
     m_particle_pub = nh.advertise<visualization_msgs::MarkerArray>("/particles", 1);
-    m_scan_pub = nh.advertise<sensor_msgs::LaserScan>("/fake_scan", 1);
     m_pose_icp = new PoseEstimationICP;
     pnh.getParam("num_particles", m_num_particles);
     pnh.getParam("percent_to_drop", m_percent_to_drop);
-    pnh.getParam("percent_to_average", m_percent_to_average);
     std::srand(ros::Time::now().toSec());
 }
 
@@ -142,8 +140,8 @@ void Localization::takeActionParticles(std::deque<Particle> &particles)
         const double &yaw_f = yaw + m_odom_at_scan.twist.twist.angular.z * dt.toSec() + acc_ang * std::pow(dt.toSec(), 2) / 2;
         const double &x_f = particle.pose.getOrigin().getX() + (m_odom_at_scan.twist.twist.linear.x * dt.toSec() + acc_x * std::pow(dt.toSec(), 2) / 2) * cos(yaw);
         const double &y_f = particle.pose.getOrigin().getY() + (m_odom_at_scan.twist.twist.linear.y * dt.toSec() + acc_y * std::pow(dt.toSec(), 2) / 2) * sin(yaw);
-        particle.pose.setOrigin(tf::Vector3(x_f + m_gen_x->operator ()(),
-                                            y_f + m_gen_y->operator ()(),
+        particle.pose.setOrigin(tf::Vector3(x_f + m_gen_x->operator ()() * cos(yaw),
+                                            y_f + m_gen_y->operator ()() * sin(yaw),
                                             0));
         particle.pose.setRotation(tf::createQuaternionFromYaw(yaw_f + m_gen_yaw->operator ()()));
     }    
@@ -152,7 +150,6 @@ void Localization::takeActionParticles(std::deque<Particle> &particles)
 void Localization::calcParticleWeights(std::deque<Particle> &particles)
 {
     const sensor_msgs::LaserScan &fake_scan = m_fake_scan->getFakeScan(m_prev_pose);
-    m_scan_pub.publish(fake_scan);
     m_prev_scan = *m_scan;
     tf::Pose prev_pose;
     prev_pose.setOrigin(tf::Vector3(m_prev_pose.position.x, m_prev_pose.position.y, 0));
@@ -216,29 +213,14 @@ void Localization::pruneAndNormalizeParticles()
 
 const tf::StampedTransform Localization::calcFinalTransform()
 {
-    const int &num_particles_to_average = m_num_particles * (m_percent_to_average / 100);
-    const int &start_it = m_particles.size() - num_particles_to_average;
-    double x = 0;
-    double y = 0;
-    double yaw = 0;
-    for(int  particle_it = start_it;  particle_it < m_particles.size(); particle_it++)
-    {
-        x += m_particles[particle_it].pose.getOrigin().getX();
-        y += m_particles[particle_it].pose.getOrigin().getY();
-        double roll, pitch, yaw_;
-        tf::Matrix3x3(m_particles[particle_it].pose.getRotation()).getRPY(roll, pitch, yaw_);
-        yaw += yaw_;        
-    }
-    x = x / double(num_particles_to_average);// - m_odom_at_scan.pose.pose.position.x;
-    y = y / double(num_particles_to_average);// - m_odom_at_scan.pose.pose.position.y;
+    const Particle &pf = m_particles.back();
     tf::Quaternion q;
     tf::quaternionMsgToTF(m_odom_at_scan.pose.pose.orientation, q);
     double roll, pitch, yaw_;
     tf::Matrix3x3(q).getRPY(roll, pitch, yaw_);
-    yaw = yaw / double(num_particles_to_average);// - yaw_;
     tf::StampedTransform transform;
-    transform.setOrigin(tf::Vector3(x, y, 0));
-    transform.setRotation(tf::createQuaternionFromYaw(yaw));  
+    transform.setOrigin(pf.pose.getOrigin());
+    transform.setRotation(pf.pose.getRotation());
     transform.stamp_ = ros::Time::now();
     transform.child_frame_id_ = "/fake_laser";
     transform.frame_id_ = "/map";

@@ -20,8 +20,8 @@ public:
 
 private:
     void convertMatrix();
-    double laserThrower(const geometry_msgs::Pose &pose, const float &inc);
-    const int getLocation(const Point &pt);
+    const double laserThrower(const geometry_msgs::Pose &pose, const float &inc) const;
+    const int getLocation(const Point &pt) const;
     void writeScan(const double &dist, sensor_msgs::LaserScan &scan);
     std::vector<std::vector<int>> m_matrix_map;
 

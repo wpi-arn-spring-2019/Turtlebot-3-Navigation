@@ -58,7 +58,6 @@ private:
     ros::Subscriber m_map_sub;
     ros::Subscriber m_pose_sub;
     ros::Publisher m_particle_pub;
-    ros::Publisher m_scan_pub;
     tf::TransformBroadcaster m_broad;
     tf::TransformListener m_list;
 
@@ -87,7 +86,6 @@ private:
 
     int m_num_particles;
     double m_percent_to_drop;
-    double m_percent_to_average;
 
 
 };

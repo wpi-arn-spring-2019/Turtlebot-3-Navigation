@@ -28,7 +28,7 @@ void FakeScan::writeScan(const double &dist, sensor_msgs::LaserScan &scan)
 //    angle of scan
 }
 
-const int FakeScan::getLocation(const Point &pt)
+const int FakeScan::getLocation(const Point &pt) const
 {
     const double &resolution = m_map.info.resolution;
     const double &height = m_map.info.height;
@@ -39,7 +39,7 @@ const int FakeScan::getLocation(const Point &pt)
     return x + y * height;
 }
 
-double FakeScan::laserThrower(const geometry_msgs::Pose &pose, const float &inc)
+const double FakeScan::laserThrower(const geometry_msgs::Pose &pose, const float &inc) const
 {
 
     //////////////////////////////////////////////////////////////////////////////////
@@ -65,17 +65,8 @@ double FakeScan::laserThrower(const geometry_msgs::Pose &pose, const float &inc)
         pt.x = pose.position.x + ray_dist * cos(angle);
         pt.y = pose.position.y + ray_dist * sin(angle);
         ray_dist += 0.01;
-        if(ray_dist > m_scan.range_max)
-        {
-            return std::numeric_limits<double>::infinity();
-        }
-    }
-    if(ray_dist < m_scan.range_min)
-    {
-        return m_scan.range_min;
     }
     return ray_dist;
 }
-
 
 }
