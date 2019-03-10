@@ -80,9 +80,9 @@ private:
     bool m_initialized = false;
     bool m_have_pose_estimate = false;
 
-    GaussianGenerator *m_gen_x;
-    GaussianGenerator *m_gen_y;
-    GaussianGenerator *m_gen_yaw;
+    GaussianGenerator *m_gen_s1;
+    GaussianGenerator *m_gen_st;
+    GaussianGenerator *m_gen_s2;
 
     int m_num_particles;
     double m_percent_to_drop;

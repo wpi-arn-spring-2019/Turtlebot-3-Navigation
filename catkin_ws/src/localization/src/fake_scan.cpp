@@ -15,7 +15,6 @@ const sensor_msgs::LaserScan FakeScan::getFakeScan(const geometry_msgs::Pose &po
 
     }
     scan.header.stamp = ros::Time::now();
-    scan.header.frame_id = "fake_laser";
     return scan;
 }
 

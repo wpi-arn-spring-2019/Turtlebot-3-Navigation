@@ -20,9 +20,9 @@ Localization::~Localization()
 {
     delete m_fake_scan;
     delete m_pose_icp;
-    delete m_gen_x;
-    delete m_gen_y;
-    delete m_gen_yaw;
+    delete m_gen_s1;
+    delete m_gen_st;
+    delete m_gen_s2;
 }
 
 void Localization::Localize()
@@ -76,13 +76,7 @@ const Particle Localization::getRandomParticle(const std::vector<Point> &open_po
     const double &x = open_points[rand_sample].x;
     const double &y = open_points[rand_sample].y;
     pose.setOrigin(tf::Vector3(x, y, 0));
-    tf::Quaternion q;
-    q.setW(m_prev_pose.orientation.w);
-    q.setX(m_prev_pose.orientation.x);
-    q.setY(m_prev_pose.orientation.y);
-    q.setZ(m_prev_pose.orientation.z);
-    double roll, pitch, yaw;
-    tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+    const double &yaw = rand_sample / open_points.size() * 2 * M_PI;
     pose.setRotation(tf::createQuaternionFromYaw(yaw));
     return Particle(pose, 1.0 / open_points.size());
 }
@@ -119,31 +113,30 @@ const std::deque<Particle> Localization::sampleParticles()
 
 void Localization::takeActionParticles(std::deque<Particle> &particles)
 {
+    const double &xi = m_odom_at_last_scan.pose.pose.position.x;
+    const double &yi = m_odom_at_last_scan.pose.pose.position.y;
+    const double &xf = m_odom_at_scan.pose.pose.position.x;
+    const double &yf = m_odom_at_scan.pose.pose.position.y;
+    const double &sigma_trans = std::sqrt(std::pow(xi -xf, 2) + std::pow(xi - xf, 2));
+    const double &ang_bet = std::atan2(yf - yi, xf - xi);
+    tf::Quaternion q;
+    tf::quaternionMsgToTF(m_odom_at_last_scan.pose.pose.orientation, q);
+    double roll, pitch, yawi, yawf;
+    tf::Matrix3x3(q).getRPY(roll, pitch, yawi);
+    tf::quaternionMsgToTF(m_odom_at_scan.pose.pose.orientation, q);
+    tf::Matrix3x3(q).getRPY(roll, pitch, yawf);
+    const double &sigma_rot1 = ang_bet - yawi;
+    const double &sigma_rot2 = yawf - yawi - sigma_rot1;
     for(auto &particle : particles)
     {
-        ros::Duration dt = m_odom_at_scan.header.stamp - m_odom_at_last_scan.header.stamp;
-        double acc_x, acc_y, acc_ang;
-        if(dt.toNSec() == 0)
-        {
-            acc_x = 0;
-            acc_y = 0;
-            acc_ang = 0;
-        }
-        else
-        {
-            acc_x = (m_odom_at_scan.twist.twist.linear.x - m_odom_at_last_scan.twist.twist.linear.x) / dt.toSec();
-            acc_y = (m_odom_at_scan.twist.twist.linear.y - m_odom_at_last_scan.twist.twist.linear.y) / dt.toSec();
-            acc_ang = (m_odom_at_scan.twist.twist.angular.z - m_odom_at_last_scan.twist.twist.angular.z) / dt.toSec();
-        }
-        double roll, pitch, yaw;
-        tf::Matrix3x3(particle.pose.getRotation()).getRPY(roll, pitch, yaw);
-        const double &yaw_f = yaw + m_odom_at_scan.twist.twist.angular.z * dt.toSec() + acc_ang * std::pow(dt.toSec(), 2) / 2;
-        const double &x_f = particle.pose.getOrigin().getX() + (m_odom_at_scan.twist.twist.linear.x * dt.toSec() + acc_x * std::pow(dt.toSec(), 2) / 2) * cos(yaw);
-        const double &y_f = particle.pose.getOrigin().getY() + (m_odom_at_scan.twist.twist.linear.y * dt.toSec() + acc_y * std::pow(dt.toSec(), 2) / 2) * sin(yaw);
-        particle.pose.setOrigin(tf::Vector3(x_f + m_gen_x->operator ()() * cos(yaw),
-                                            y_f + m_gen_y->operator ()() * sin(yaw),
-                                            0));
-        particle.pose.setRotation(tf::createQuaternionFromYaw(yaw_f + m_gen_yaw->operator ()()));
+        const double &sigma_rot1_ = sigma_rot1 + m_gen_s1->operator ()();
+        const double &sigma_trans_ = sigma_trans + m_gen_st->operator ()();
+        const double &sigma_rot2_ = sigma_rot2 + m_gen_s2->operator ()();
+        const double &x = xi + sigma_trans_ * cos (yawi + sigma_rot1_);
+        const double &y = yi + sigma_trans_ * sin (yawi + sigma_rot1_);
+        const double &yaw = yawi + sigma_rot1_ + sigma_rot2_;
+        particle.pose.setOrigin(tf::Vector3(x, y, 0));
+        particle.pose.setRotation(tf::createQuaternionFromYaw(yaw));
     }    
 }
 
@@ -173,11 +166,11 @@ const double Localization::calcDistanceScore(const tf::Point &particle_pt, const
     const double &dy = fabs(particle_pt.getY() - sensor_pt.getY());
     const double &dz = fabs(particle_pt.getZ() - sensor_pt.getZ());
     double dist = std::sqrt(std::pow(dx, 2) + std::pow(dy, 2) + std::pow(dz, 2));
-    if(dist <= 0.000001)
+    if(dist <= 0.001)
     {
-        dist = 0.00001;
+        dist = 0.001;
     }
-    return 100.0 / (dist);
+    return 1.0f / (dist);
 }
 
 const double Localization::calcRotationScore(const tf::Quaternion &particle_q, const tf::Quaternion &sensor_q)
@@ -185,12 +178,12 @@ const double Localization::calcRotationScore(const tf::Quaternion &particle_q, c
     double roll, pitch, yaw_p, yaw_s;
     tf::Matrix3x3(particle_q).getRPY(roll, pitch, yaw_p);
     tf::Matrix3x3(sensor_q).getRPY(roll, pitch, yaw_s);
-    double d_yaw = yaw_p - yaw_s;
-    if(fabs(d_yaw) <= 0.000001)
+    double d_yaw = fabs(yaw_p - yaw_s);
+    if(d_yaw <= 0.001)
     {
-        d_yaw = 0.00001;
+        d_yaw = 0.001;
     }
-    return 1.0 / fabs(d_yaw);
+    return 1.0f / d_yaw;
 }
 
 void Localization::pruneAndNormalizeParticles()
@@ -213,16 +206,22 @@ void Localization::pruneAndNormalizeParticles()
 
 const tf::StampedTransform Localization::calcFinalTransform()
 {
-    const Particle &pf = m_particles.back();
-    tf::Quaternion q;
-    tf::quaternionMsgToTF(m_odom_at_scan.pose.pose.orientation, q);
-    double roll, pitch, yaw_;
-    tf::Matrix3x3(q).getRPY(roll, pitch, yaw_);
+    double x = 0;
+    double y = 0;
+    double yaw = 0;
+    for(const auto &particle : m_particles)
+    {
+        x += particle.pose.getOrigin().getX() * particle.weight;
+        y += particle.pose.getOrigin().getY() * particle.weight;
+        double roll, pitch, yaw_;
+        tf::Matrix3x3(particle.pose.getRotation()).getRPY(roll, pitch, yaw_);
+        yaw += yaw_ * particle.weight;
+    }
     tf::StampedTransform transform;
-    transform.setOrigin(pf.pose.getOrigin());
-    transform.setRotation(pf.pose.getRotation());
+    transform.setOrigin(tf::Vector3(x, y, 0));
+    transform.setRotation(tf::createQuaternionFromYaw(yaw));
     transform.stamp_ = ros::Time::now();
-    transform.child_frame_id_ = "/fake_laser";
+    transform.child_frame_id_ = "/whatever";
     transform.frame_id_ = "/map";
     return transform;
 }
@@ -267,16 +266,12 @@ void Localization::integratePoseToCurrentTime()
 
 void Localization::setPreviousPose(const tf::StampedTransform &transform)
 {
-    m_prev_pose.position.x = transform.getOrigin().getX();// + m_odom_at_scan.pose.pose.position.x;
-    m_prev_pose.position.y = transform.getOrigin().getY();// + m_odom_at_scan.pose.pose.position.y;
+    m_prev_pose.position.x = transform.getOrigin().getX();
+    m_prev_pose.position.y = transform.getOrigin().getY();
     m_prev_pose.position.z = 0;
-    tf::Quaternion q;
-    tf::quaternionMsgToTF(m_odom_at_scan.pose.pose.orientation, q);
-    q = transform.getRotation();// + q;
-    q.normalize();
-    geometry_msgs::Quaternion gq;
-    tf::quaternionTFToMsg(q, gq);
-    m_prev_pose.orientation = gq;
+    geometry_msgs::Quaternion q;
+    tf::quaternionTFToMsg(transform.getRotation(), q);
+    m_prev_pose.orientation = q;
     m_odom_at_last_scan = m_odom_at_scan;
 }
 
@@ -297,7 +292,7 @@ void Localization::integrateOdomToScanTime()
     const double &radius_curvature = std::pow(m_odom_at_scan.twist.twist.linear.x, 2) +
                                      std::pow(m_odom_at_scan.twist.twist.linear.y, 2) /
                                      m_odom_at_scan.twist.twist.angular.z;
-    const double &yaw_f = m_odom_at_scan.twist.twist.linear.z * dt.toSec();
+    const double &yaw_f = yaw + m_odom_at_scan.twist.twist.linear.z * dt.toSec();
     double x_f;
     double y_f;
     if(std::isnan(radius_curvature))
@@ -343,12 +338,17 @@ void Localization::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
         m_prev_odom = msg;
         RandomGenerator rng;
         rng.seed(ros::Time::now().toSec());
-        GaussianDistribution dist_x(0.0, std::sqrt(msg->pose.covariance[0]));
-        GaussianDistribution dist_y(0.0, std::sqrt(msg->pose.covariance[7]));
-        GaussianDistribution dist_yaw(0.0, std::sqrt(msg->pose.covariance[35]));
-        m_gen_x = new GaussianGenerator(rng, dist_x);
-        m_gen_y = new GaussianGenerator(rng, dist_y);
-        m_gen_yaw = new GaussianGenerator(rng, dist_yaw);
+        const double &cov_trans = sqrt(msg->pose.covariance[0] + msg->pose.covariance[7]);
+        const double &cov_rot = std::sqrt(msg->pose.covariance[35]);
+        const double &cov_sigma_rot1 = cov_rot + cov_trans;
+        const double &cov_sigma_trans = cov_trans + 2 * cov_rot;
+        const double &cov_sigma_rot2 = cov_rot + cov_trans;
+        GaussianDistribution s1(0.0, cov_sigma_rot1);
+        GaussianDistribution st(0.0, cov_sigma_trans);
+        GaussianDistribution s2(0.0, cov_sigma_rot2);
+        m_gen_s1 = new GaussianGenerator(rng, s1);
+        m_gen_st = new GaussianGenerator(rng, st);
+        m_gen_s2 = new GaussianGenerator(rng, s2);
     }
     m_odom = msg;
 }
