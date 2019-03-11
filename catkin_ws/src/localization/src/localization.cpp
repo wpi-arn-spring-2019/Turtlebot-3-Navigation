@@ -183,7 +183,7 @@ const double Localization::calcDistanceScore(const tf::Point &particle_pt, const
     {
         dist = 0.001;
     }
-    return 1.0f / (dist);
+    return 1.0f / (ist;
 }
 
 const double Localization::calcRotationScore(const tf::Quaternion &particle_q, const tf::Quaternion &sensor_q)
