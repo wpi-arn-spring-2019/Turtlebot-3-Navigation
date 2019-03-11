@@ -93,6 +93,7 @@ private:
 
     int m_num_particles;
     double m_percent_to_drop;
+    double m_percent_to_average;
 
 
 };

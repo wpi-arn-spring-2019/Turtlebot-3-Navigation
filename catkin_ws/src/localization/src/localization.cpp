@@ -13,6 +13,7 @@ Localization::Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_pose_icp = new PoseEstimationICP;
     pnh.getParam("num_particles", m_num_particles);
     pnh.getParam("percent_to_drop", m_percent_to_drop);
+    pnh.getParam("percent_to_average", m_percent_to_average);
     pnh.getParam("sensor_var_x", m_sensor_var_x);
     pnh.getParam("sensor_var_y", m_sensor_var_y);
     pnh.getParam("sensor_vary_aw", m_sensor_var_yaw);
@@ -194,7 +195,7 @@ const double Localization::calcRotationScore(const tf::Quaternion &particle_q, c
     {
         d_yaw = 0.001;
     }
-    return 1.0f / d_yaw;
+    return 10.0f / d_yaw;
 }
 
 void Localization::pruneAndNormalizeParticles()
@@ -217,6 +218,19 @@ void Localization::pruneAndNormalizeParticles()
 
 const tf::StampedTransform Localization::calcFinalTransform()
 {
+    const int &num_particles_to_avg = m_percent_to_average / 100 * m_num_particles;
+    const int &start_it = m_particles.size() - num_particles_to_avg;
+    double total_weight = 0;
+    std::vector<Particle> particles_to_avg;
+    for(int particle_it = start_it; particle_it < m_particles.size(); particle_it++)
+    {
+        particles_to_avg.push_back(m_particles[particle_it]);
+        total_weight += m_particles[particle_it].weight;
+    }
+    for(auto &particle : particles_to_avg)
+    {
+        particle.weight = particle.weight / total_weight;
+    }
     double x = 0;
     double y = 0;
     double yaw = 0;
