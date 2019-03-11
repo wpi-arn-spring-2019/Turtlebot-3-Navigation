@@ -119,22 +119,22 @@ const std::deque<Particle> Localization::sampleParticles()
 
 void Localization::takeActionParticles(std::deque<Particle> &particles)
 {
-    const double &xi = m_odom_at_last_scan.pose.pose.position.x;
-    const double &yi = m_odom_at_last_scan.pose.pose.position.y;
-    const double &xf = m_odom_at_scan.pose.pose.position.x;
-    const double &yf = m_odom_at_scan.pose.pose.position.y;
-    const double &sigma_trans = std::sqrt(std::pow(xi -xf, 2) + std::pow(xi - xf, 2));
-    const double &ang_bet = std::atan2(yf - yi, xf - xi);
-    tf::Quaternion q;
-    tf::quaternionMsgToTF(m_odom_at_last_scan.pose.pose.orientation, q);
-    double roll, pitch, yawi, yawf;
-    tf::Matrix3x3(q).getRPY(roll, pitch, yawi);
-    tf::quaternionMsgToTF(m_odom_at_scan.pose.pose.orientation, q);
-    tf::Matrix3x3(q).getRPY(roll, pitch, yawf);
-    const double &sigma_rot1 = ang_bet - yawi;
-    const double &sigma_rot2 = yawf - yawi - sigma_rot1;
+
     for(auto &particle : particles)
     {
+        const double &xi = particle.pose.getOrigin().getX();
+        const double &yi = particle.pose.getOrigin().getY();
+        const double &xf = m_odom_at_scan.pose.pose.position.x;
+        const double &yf = m_odom_at_scan.pose.pose.position.y;
+        const double &sigma_trans = std::sqrt(std::pow(xi -xf, 2) + std::pow(xi - xf, 2));
+        const double &ang_bet = std::atan2(yf - yi, xf - xi);
+        double roll, pitch, yawi, yawf;
+        tf::Matrix3x3(particle.pose.getRotation()).getRPY(roll, pitch, yawi);
+        tf::Quaternion q;
+        tf::quaternionMsgToTF(m_odom_at_scan.pose.pose.orientation, q);
+        tf::Matrix3x3(q).getRPY(roll, pitch, yawf);
+        const double &sigma_rot1 = ang_bet - yawi;
+        const double &sigma_rot2 = yawf - yawi - sigma_rot1;
         const double &sigma_rot1_ = sigma_rot1 + m_gen_s1->operator ()();
         const double &sigma_trans_ = sigma_trans + m_gen_st->operator ()();
         const double &sigma_rot2_ = sigma_rot2 + m_gen_s2->operator ()();
