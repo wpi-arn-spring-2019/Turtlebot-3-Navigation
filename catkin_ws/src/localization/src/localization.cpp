@@ -48,8 +48,7 @@ void Localization::Localize()
     m_particles = particles;
     pubParticles();
     pruneAndNormalizeParticles();    
-    tf::StampedTransform final_tf = calcFinalTransform();
-    m_broad.sendTransform(final_tf);
+    tf::StampedTransform final_tf = calcFinalTransform();    
     setPreviousPose(final_tf);
 }
 
@@ -119,7 +118,6 @@ const std::deque<Particle> Localization::sampleParticles()
 
 void Localization::takeActionParticles(std::deque<Particle> &particles)
 {
-
     for(auto &particle : particles)
     {
         const double &xi = particle.pose.getOrigin().getX();
@@ -230,12 +228,28 @@ const tf::StampedTransform Localization::calcFinalTransform()
         tf::Matrix3x3(particle.pose.getRotation()).getRPY(roll, pitch, yaw_);
         yaw += yaw_ * particle.weight;
     }
+    tf::StampedTransform odom_transform;
+    try
+    {
+        m_list.lookupTransform("/odom", "base_footprint", ros::Time(0), odom_transform);
+    }
+    catch(tf::TransformException &ex)
+    {
+        ROS_ERROR("%s",ex.what());
+    }
+    double roll, pitch, yaw_odom;
+    tf::Matrix3x3(odom_transform.getRotation()).getRPY(roll, pitch, yaw_odom);
     tf::StampedTransform transform;
+    transform.setOrigin(tf::Vector3(x - odom_transform.getOrigin().getX(),
+                                    y - odom_transform.getOrigin().getY(),
+                                    0));
+    transform.setRotation(tf::createQuaternionFromYaw(yaw - yaw_odom));
+    transform.stamp_ = ros::Time::now();
+    transform.child_frame_id_ = "/odom";
+    transform.frame_id_ = "/map";
+    m_broad.sendTransform(transform);
     transform.setOrigin(tf::Vector3(x, y, 0));
     transform.setRotation(tf::createQuaternionFromYaw(yaw));
-    transform.stamp_ = ros::Time::now();
-    transform.child_frame_id_ = "/whatever";
-    transform.frame_id_ = "/map";
     return transform;
 }
 
@@ -352,7 +366,7 @@ void Localization::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
         RandomGenerator rng;
         rng.seed(ros::Time::now().toSec());
         const double &cov_trans = sqrt(msg->pose.covariance[0] + msg->pose.covariance[7]);
-        const double &cov_rot = std::sqrt(msg->pose.covariance[35] / 10);
+        const double &cov_rot = std::sqrt(msg->pose.covariance[35]);
         const double &cov_sigma_rot1 = cov_rot + cov_trans;
         const double &cov_sigma_trans = cov_trans + 2 * cov_rot;
         const double &cov_sigma_rot2 = cov_rot + cov_trans;
