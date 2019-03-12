@@ -13,9 +13,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <time.h>
 #include <tf/tf.h>
-#include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
-#include <tf/transform_listener.h>
 #include <visualization_msgs/MarkerArray.h>
 
 typedef boost::normal_distribution<> GaussianDistribution;
@@ -47,10 +45,11 @@ private:
     const double calcDistanceScore(const tf::Point &particle_pt, const tf::Point &sensor_pt);
     const double calcRotationScore(const tf::Quaternion &particle_q, const tf::Quaternion &sensor_q);
     void pruneAndNormalizeParticles();
-    const tf::StampedTransform calcFinalTransform();
+    const tf::Pose calcFinalPose();
     void pubParticles();
-    void integratePoseToCurrentTime();
-    void setPreviousPose(const tf::StampedTransform &transform);
+    void integratePoseToCurrentTime(tf::Pose &pose);
+    void setPreviousPose(const tf::Pose &poes);
+    void pubFinalPose();
     void integrateOdomToScanTime();
 
     ros::Subscriber m_scan_sub;
@@ -58,8 +57,7 @@ private:
     ros::Subscriber m_map_sub;
     ros::Subscriber m_pose_sub;
     ros::Publisher m_particle_pub;
-    tf::TransformBroadcaster m_broad;
-    tf::TransformListener m_list;
+    ros::Publisher m_pose_pub;
 
     PoseEstimationICP *m_pose_icp;
     FakeScan *m_fake_scan;
