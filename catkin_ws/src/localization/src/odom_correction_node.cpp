@@ -7,11 +7,18 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh;
 
+    Turtlebot::OdomCorrection oc(nh);
+
+    ros::Rate r(1000);
+
     while(ros::ok)
     {
-        ros::spin();
+        ros::spinOnce();
+
+        oc.correctOdom();
+
+        r.sleep();
     }
 
     return 0;
-
 }
