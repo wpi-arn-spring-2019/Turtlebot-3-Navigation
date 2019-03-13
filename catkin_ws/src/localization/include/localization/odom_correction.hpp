@@ -17,12 +17,12 @@ public:
     void correctOdom();
 
 private:
-    void poseCallback(const geometry_msgs::Pose::ConstPtr &msg);
+    void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
 
     ros::Subscriber m_pose_sub;
     tf::TransformBroadcaster m_broad;
     tf::TransformListener m_list;
-    geometry_msgs::Pose::ConstPtr m_pose;    
+    geometry_msgs::PoseStamped::ConstPtr m_pose;
     bool m_have_pose = false;
 
 };

@@ -10,7 +10,7 @@ Localization::Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_map_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, &Localization::mapCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1, &Localization::poseCallback, this);
     m_particle_pub = nh.advertise<visualization_msgs::MarkerArray>("/particles", 1);
-    m_pose_pub = nh.advertise<geometry_msgs::Pose>("/pf_pose", 10);
+    m_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/pf_pose", 10);
     m_pose_icp = new PoseEstimationICP;
     pnh.getParam("num_particles", m_num_particles);
     pnh.getParam("percent_to_drop", m_percent_to_drop);
@@ -321,7 +321,10 @@ void Localization::setPreviousPose(const tf::Pose &pose)
 
 void Localization::pubFinalPose()
 {
-    m_pose_pub.publish(m_prev_pose);
+    geometry_msgs::PoseStamped pose;
+    pose.header.stamp = ros::Time::now();
+    pose.pose = m_prev_pose;
+    m_pose_pub.publish(pose);
 }
 
 void Localization::integrateOdomToScanTime()

@@ -5,7 +5,7 @@ namespace Turtlebot
 
 OdomCorrection::OdomCorrection(ros::NodeHandle &nh)
 {
-    m_pose_sub = nh.subscribe<geometry_msgs::Pose>("/pf_pose", 10, &OdomCorrection::poseCallback, this);
+    m_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/pf_pose", 10, &OdomCorrection::poseCallback, this);
 }
 
 void OdomCorrection::correctOdom()
@@ -22,9 +22,9 @@ void OdomCorrection::correctOdom()
             ROS_ERROR("%s",ex.what());
         }
         tf::Point pt;
-        tf::pointMsgToTF(m_pose->position, pt);
+        tf::pointMsgToTF(m_pose->pose.position, pt);
         tf::Quaternion q;
-        tf::quaternionMsgToTF(m_pose->orientation, q);
+        tf::quaternionMsgToTF(m_pose->pose.orientation, q);
         tf::Transform transform;
         transform.setOrigin(pt);
         transform.setRotation(q);
@@ -39,7 +39,7 @@ void OdomCorrection::correctOdom()
     }
 }
 
-void OdomCorrection::poseCallback(const geometry_msgs::Pose::ConstPtr &msg)
+void OdomCorrection::poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
     if(!m_have_pose)
     {
