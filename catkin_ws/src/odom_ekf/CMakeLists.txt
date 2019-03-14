@@ -106,7 +106,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include/odom_ekf
 #  LIBRARIES odom_ekf
-#  CATKIN_DEPENDS nav_msgs roscpp sensor_msgs
+CATKIN_DEPENDS nav_msgs roscpp sensor_msgs
 #  DEPENDS system_lib
 )
 
