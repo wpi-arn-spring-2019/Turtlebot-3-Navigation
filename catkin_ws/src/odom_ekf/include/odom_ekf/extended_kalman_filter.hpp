@@ -19,9 +19,10 @@ private:
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
     void imuCallback(const sensor_msgs::Imu::ConstPtr &msg);
 
+    void initializeFilter(ros::NodeHandle &pnh);
     void filterOdom();
-
     const Eigen::MatrixXf calcG();
+    const float checkSign(const float &val);
     const Eigen::MatrixXf calcUBar();
 
 
@@ -40,6 +41,10 @@ private:
     sensor_msgs::Imu m_imu_at_odom;
     sensor_msgs::Imu m_imu_at_last_odom;
     sensor_msgs::Imu::ConstPtr m_prev_imu;
+
+    Eigen::MatrixXf m_covariance;
+    Eigen::MatrixXf m_imu_covariance;
+    Eigen::MatrixXf m_odom_covariance;
 
     bool m_have_odom = false;
     bool m_have_imu = false;

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
     <node name="odom_ekf_node" pkg="odom_ekf" type="odom_ekf_node" output="screen">
-
+        <rosparam command="load" file="$(find odom_ekf)/params/extended_kalman_params.yaml"/>
     </node>
 </launch>
