@@ -127,7 +127,7 @@ void Localization::takeActionParticles(std::deque<Particle> &particles)
         const double &yi = particle.pose.getOrigin().getY();
         const double &xf = m_odom_at_scan.pose.pose.position.x;
         const double &yf = m_odom_at_scan.pose.pose.position.y;
-        const double &sigma_trans = std::sqrt(std::pow(xi -xf, 2) + std::pow(xi - xf, 2));
+        const double &sigma_trans = std::sqrt(std::pow(xi -xf, 2) + std::pow(yi - yf, 2));
         const double &ang_bet = std::atan2(yf - yi, xf - xi);
         const double &yawi = tf::getYaw(particle.pose.getRotation());
         tf::Quaternion q;
@@ -138,8 +138,8 @@ void Localization::takeActionParticles(std::deque<Particle> &particles)
         const double &sigma_rot1_ = sigma_rot1 + m_gen_s1->operator ()();
         const double &sigma_trans_ = sigma_trans + m_gen_st->operator ()();
         const double &sigma_rot2_ = sigma_rot2 + m_gen_s2->operator ()();
-        const double &x = xi + sigma_trans_ * cos (yawi + sigma_rot1_);
-        const double &y = yi + sigma_trans_ * sin (yawi + sigma_rot1_);
+        const double &x = xi + sigma_trans_ * sin (yawi + sigma_rot1_);
+        const double &y = yi + sigma_trans_ * cos (yawi + sigma_rot1_);
         const double &yaw = yawi + sigma_rot1_ + sigma_rot2_;
         particle.pose.setOrigin(tf::Vector3(x, y, 0));
         particle.pose.setRotation(tf::createQuaternionFromYaw(yaw));

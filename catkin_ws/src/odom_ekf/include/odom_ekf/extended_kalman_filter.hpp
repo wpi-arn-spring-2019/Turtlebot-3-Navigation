@@ -21,7 +21,8 @@ private:
 
     void filterOdom();
 
-    const Eigen::MatrixXd calcG();
+    const Eigen::MatrixXf calcG();
+    const Eigen::MatrixXf calcUBar();
 
 
 
@@ -31,6 +32,8 @@ private:
     ros::Subscriber m_odom_sub;
     ros::Subscriber m_imu_sub;
     ros::Publisher m_odom_pub;
+
+    nav_msgs::Odometry m_odom_filtered;
 
     nav_msgs::Odometry::ConstPtr m_odom;
     sensor_msgs::Imu::ConstPtr m_imu;

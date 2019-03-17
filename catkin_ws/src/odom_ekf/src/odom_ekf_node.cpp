@@ -11,6 +11,8 @@ int main(int argc, char **argv)
 
     ros::Rate rate(100);
 
+    Turtlebot::ExtendedKalmanFilter ekf(nh, pnh);
+
     while(ros::ok)
     {
         ros::spinOnce();
