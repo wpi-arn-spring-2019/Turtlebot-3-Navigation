@@ -7,6 +7,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <local_planner_types.hpp>
+#include <unordered_map>
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
@@ -50,14 +51,14 @@ private:
     void clearFrontier();
     void openNode(const GraphNode &node);
     void closeNode(const GraphNode &node);
-    const std::pair<bool, GraphNode> checkForGoal(const GraphNode &node);
+    const bool checkForGoal(const GraphNode &node);
     void expandFrontier(const GraphNode &current_node);
     const std::vector<GraphNode> getNeighbors(const GraphNode &current_node);
 
     //sampling
     const std::vector<double> calcPossibleVelocities(const GraphNode &current_node) const;
     const std::vector<double> calcPossibleHeadings(const GraphNode &current_node) const;   
-    const tf::Transform calcNeighborTransform(const Point<double> &pt, const double &heading) const;
+    const tf::Transform calcNodeTransform(const Point<double> &pt, const double &heading) const;
 
     //cost functions
     const double calcG(const Point<double> &pt, const GraphNode &parent_node) const;
@@ -73,19 +74,20 @@ private:
 
     //helper functions
     const int &calcGridLocation(const Point<double> &pt) const;
-    void publishOccGrid(const nav_msgs::OccupancyGrid &grid);
-    void pubSpline(const Spline1d &spline);
+
+    //output functions
+    void reconstructTrajectory();
+    const std::vector<GraphNode> reverseTrajectory(const std::vector<GraphNode> &reverse_traj);
+    void pubTrajectory(const std::vector<GraphNode> &traj);
 
     //pubsub
     ros::Subscriber m_costmap_sub;
     ros::Subscriber m_goal_pose_sub;
     ros::Subscriber m_pose_sub;
     ros::Subscriber m_odom_sub;
-    ros::Publisher m_occ_grid_pub;
     ros::Publisher m_path_pub;
     ros::Publisher m_trajectory_pub;
     ros::Publisher m_goal_pub;
-    ros::Publisher m_spline_pub;
 
     //members
 
@@ -93,6 +95,8 @@ private:
     std::priority_queue<GraphNode, std::vector<GraphNode>, GraphNode::CheaperCost> m_frontier;
     std::vector<GraphNode> m_open_nodes;
     std::vector<GraphNode> m_closed_nodes;
+    std::unordered_map<int, GraphNode> m_nodes;
+    int m_node_id = 0;
 
     //collision
     std::vector<tf::Point> m_collision_pts;

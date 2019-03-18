@@ -10,9 +10,8 @@ LocalPlanner::LocalPlanner(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/pf_pose", 10, &LocalPlanner::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &LocalPlanner::odomCallback, this);
     m_trajectory_pub = nh.advertise<turtlebot_msgs::Trajectory>("/trajectory", 10);
-    m_occ_grid_pub = nh.advertise<nav_msgs::OccupancyGrid>("/planning_scene", 1);
+    m_path_pub = nh.advertise<nav_msgs::Path>("/planned_path", 10);
     m_goal_pub = nh.advertise<geometry_msgs::PoseStamped>("/goal", 100);
-    m_spline_pub = nh.advertise<nav_msgs::Path>("/spline", 100);
     getParams(pnh);
 }
 
@@ -64,17 +63,23 @@ void LocalPlanner::planPath()
         duration = ros::Time::now() - start_time;
         if(duration.toSec() * 1000 > m_timeout_ms)
         {
-            ROS_ERROR_STREAM("path plan time exceeded, attempting to replan");
+            ROS_ERROR_STREAM("Path plan time exceeded, attempting to replan");
             return;
         }
-        const GraphNode &current_node = m_frontier.top();
-        m_frontier.pop();
-        std::pair<bool, GraphNode> goal_result = checkForGoal(current_node);
-        if(goal_result.first)
+        GraphNode current_node = m_frontier.top();
+        while(checkForCollision(calcNodeTransform(current_node.child_point, current_node.heading)))
+        {
+            m_frontier.pop();
+            closeNode(current_node);
+            current_node = m_frontier.top();
+        }
+        if(checkForGoal(current_node))
         {
             ROS_INFO_STREAM("Path found in " << duration.toSec() << " seconds ");
+            reconstructTrajectory();
             break;
         }
+        m_frontier.pop();
         closeNode(current_node);
         expandFrontier(current_node);
     }        
@@ -89,8 +94,10 @@ void LocalPlanner::initializePlanner()
 void LocalPlanner::clearFrontier()
 {
     m_frontier = std::priority_queue<GraphNode, std::vector<GraphNode>, GraphNode::CheaperCost>();
-    m_open_nodes.clear();
-    m_closed_nodes.clear();
+    m_open_nodes.clear();    
+    m_closed_nodes.clear();    
+    m_nodes.clear();
+    m_node_id = 0;
     double roll, pitch, yaw;
     tf::Quaternion q;
     q.setW(m_pose->pose.orientation.w);
@@ -101,15 +108,18 @@ void LocalPlanner::clearFrontier()
     const double &vel = std::sqrt(std::pow(m_turtlebot_velocity.linear.x, 2) + std::pow(m_turtlebot_velocity.linear.y, 2));
     const GraphNode &node = GraphNode(Point<double>(m_pose->pose.position.x, m_pose->pose.position.y),
                                       Point<double>(m_pose->pose.position.x, m_pose->pose.position.y),
-                                      yaw, vel, 0.0, std::numeric_limits<double>::infinity());
+                                      m_node_id, m_node_id, yaw, vel, 0.0, std::numeric_limits<double>::infinity());
+    m_node_id++;
     m_frontier.push(node);
     openNode(node);
+    m_nodes.insert(std::make_pair(m_node_id, node));
+    m_node_id++;
 }
 
 void LocalPlanner::openNode(const GraphNode &node)
 {
     m_frontier.push(node);
-    m_open_nodes.push_back(node);
+    m_open_nodes.push_back(node);    
 }
 
 void LocalPlanner::closeNode(const GraphNode &node)
@@ -126,7 +136,7 @@ void LocalPlanner::closeNode(const GraphNode &node)
     m_open_nodes.erase(it);
 }
 
-const std::pair<bool, GraphNode> LocalPlanner::checkForGoal(const GraphNode &node)
+const bool LocalPlanner::checkForGoal(const GraphNode &node)
 {
     const double &time_step = m_time_step_ms / 1000;
     const double &dist_to_goal = calcDistanceBetween(node.child_point, Point<double>(m_goal_pose->x, m_goal_pose->y));
@@ -136,12 +146,10 @@ const std::pair<bool, GraphNode> LocalPlanner::checkForGoal(const GraphNode &nod
     if((dist_to_goal > max_travel_dist + m_goal_pos_tolerance) ||
        (heading_diff > m_max_yaw_rate * time_step + m_goal_heading_tolerance) ||
        (velocity_diff > m_goal_pose->max_accel * time_step + m_goal_speed_tolerance))
-    {
-        const GraphNode dummy_node(Point<double>(0, 0), Point<double>(0, 0), 0, 0, 0, 0);
-        return std::make_pair(false, dummy_node);
+    {        
+        return false;
     }
-    const GraphNode goal_node(Point<double>(m_goal_pose->x, m_goal_pose->y), node.child_point, m_goal_pose->heading, m_goal_pose->speed, 0, 0);
-    return std::make_pair(true, goal_node);
+    return true;
 }
 
 void LocalPlanner::expandFrontier(const GraphNode &current_node)
@@ -173,23 +181,21 @@ const std::vector<GraphNode> LocalPlanner::getNeighbors(const GraphNode &current
 {
     std::vector<GraphNode> neighbors = {};
     const Spline1d &spline = calcSpline(current_node.child_point, current_node.heading);
-    pubSpline(spline);
     const std::vector<double> &possible_velocities = calcPossibleVelocities(current_node);
     const std::vector<double> &possible_headings = calcPossibleHeadings(current_node);    
     for(const auto &velocity : possible_velocities)
     {
         for(const auto &heading : possible_headings)
         {
-            const double &average_velocity = (velocity + current_node.velocity) / 2;
-            const double &x = current_node.child_point.x + average_velocity * m_time_step_ms / 1000 * cos(heading);
-            const double &y = current_node.child_point.y + average_velocity * m_time_step_ms / 1000 * sin(heading);
-            const Point<double> new_pt(x, y);
-            if(!checkForCollision(calcNeighborTransform(new_pt, heading)))
-            {
-                const double &g = calcG(new_pt, current_node);
-                const double &h = calcH(new_pt, current_node.child_point, heading, velocity, spline);
-                neighbors.push_back(GraphNode(new_pt, current_node.child_point, heading, velocity, g, g + h));
-            }
+            const double &x = current_node.child_point.x + velocity * m_time_step_ms / 1000 * cos(heading);
+            const double &y = current_node.child_point.y + velocity * m_time_step_ms / 1000 * sin(heading);
+            const Point<double> new_pt(x, y);           
+            const double &g = calcG(new_pt, current_node);
+            const double &h = calcH(new_pt, current_node.child_point, heading, velocity, spline);
+            GraphNode new_node(new_pt, current_node.child_point, m_node_id, current_node.id, heading, velocity, g, g + h);
+            neighbors.push_back(new_node);
+            m_nodes.insert(std::make_pair(m_node_id, new_node));
+            m_node_id++;
         }
     }    
     return neighbors;
@@ -239,7 +245,7 @@ const std::vector<double> LocalPlanner::calcPossibleHeadings(const GraphNode &cu
     return possible_yaws;
 }
 
-const tf::Transform LocalPlanner::calcNeighborTransform(const Point<double> &pt, const double &heading) const
+const tf::Transform LocalPlanner::calcNodeTransform(const Point<double> &pt, const double &heading) const
 {
     tf::Transform transform;
     transform.setOrigin(tf::Vector3(pt.x, pt.y, 0));
@@ -367,29 +373,71 @@ const int &LocalPlanner::calcGridLocation(const Point<double> &pt) const
     return location;
 }
 
-void LocalPlanner::pubSpline(const Spline1d &spline)
+void LocalPlanner::reconstructTrajectory()
 {
-    double it = 0;
-    double rez = 0.01;
-    nav_msgs::Path path;
-    path.header.frame_id = "/map";
-    while(it < 1)
+    std::vector<GraphNode> reverse_trajectory;
+    GraphNode current_node = m_frontier.top();
+    while(current_node.parent_id != 0)
     {
-        const Eigen::MatrixXd &spline_pt = spline(it);
-        const double &x = spline_pt(0);
-        const double &y = spline_pt(1);
-        it += rez;
+        reverse_trajectory.push_back(current_node);
+        current_node = m_nodes[current_node.parent_id];
+    }
+    const std::vector<GraphNode> trajectory = reverseTrajectory(reverse_trajectory);
+    pubTrajectory(trajectory);
+}
+
+const std::vector<GraphNode> LocalPlanner::reverseTrajectory(const std::vector<GraphNode> &reverse_traj)
+{
+    std::vector<GraphNode> traj;
+    for(int traj_id = reverse_traj.size() - 1; traj_id >= 0; traj_id--)
+    {
+        traj.push_back(reverse_traj[traj_id]);
+    }
+    return traj;
+}
+
+void LocalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
+{
+    turtlebot_msgs::Trajectory trajectory;
+    nav_msgs::Path path;
+    trajectory.header.stamp = m_goal_pose->header.stamp;
+    path.header.stamp = m_goal_pose->header.stamp;
+    trajectory.max_accel = m_goal_pose->max_accel;
+    trajectory.max_speed = m_goal_pose->max_speed;
+    path.header.frame_id = "/map";
+    double time_from_start = 0;
+    for(int traj_it = 0; traj_it < traj.size(); traj_it++)
+    {
+        const double &x = traj[traj_it].child_point.x;
+        const double &y = traj[traj_it].child_point.y;
+        const double &heading = traj[traj_it].heading;
+        double yaw_rate;
+        if(traj_it < traj.size() - 1)
+        {
+            const double &next_heading = traj[traj_it + 1].heading;
+            yaw_rate = (next_heading - heading) / m_time_step_ms;
+        }
+        else
+        {
+            yaw_rate = 0;
+        }
+        const double &velocity = traj[traj_it].velocity;
+        trajectory.x_values.push_back(x);
+        trajectory.y_values.push_back(x);
+        trajectory.speeds.push_back(velocity);
+        trajectory.headings.push_back(heading);
+        trajectory.yaw_rates.push_back(yaw_rate);
+        trajectory.durations.push_back(m_time_step_ms);
         geometry_msgs::PoseStamped pose;
         pose.pose.position.x = x;
         pose.pose.position.y = y;
         path.poses.push_back(pose);
+        time_from_start += m_time_step_ms;
     }
-    m_spline_pub.publish(path);
-}
+    m_trajectory_pub.publish(trajectory);
+    m_path_pub.publish(path);
+    ROS_INFO_STREAM("path published");
 
-void LocalPlanner::publishOccGrid(const nav_msgs::OccupancyGrid &grid)
-{
-    m_occ_grid_pub.publish(grid);
 }
 
 void LocalPlanner::costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg)

@@ -5,6 +5,7 @@ template <typename Object>
 
 struct Point
 {
+    Point(){}
     Point(const Object &x_, const Object &y_) :
         x(x_),
         y(y_)
@@ -22,9 +23,13 @@ struct Point
 
 struct GraphNode
 {
-    GraphNode(const Point<double> &cp, const Point<double> &pp, const double &h, const double &v, const double &g_, const double &cost_) :
+    GraphNode(){}
+    GraphNode(const Point<double> &cp, const Point<double> &pp, const int &id_, const int &parent_id_,
+              const double &h, const double &v, const double &g_, const double &cost_) :
         child_point(cp),
         parent_point(pp),
+        id(id_),
+        parent_id(parent_id_),
         heading(h),
         velocity(v),
         g(g_),
@@ -33,6 +38,8 @@ struct GraphNode
     ~GraphNode() = default;
     Point<double> child_point;
     Point<double> parent_point;
+    int id;
+    int parent_id;
     double heading;
     double velocity;
     double g;
