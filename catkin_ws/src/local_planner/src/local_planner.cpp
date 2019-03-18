@@ -75,7 +75,6 @@ void LocalPlanner::planPath()
         }
         if(checkForGoal(current_node))
         {
-            ROS_INFO_STREAM("Path found in " << duration.toSec() << " seconds ");
             reconstructTrajectory();
             break;
         }
@@ -436,8 +435,6 @@ void LocalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
     }
     m_trajectory_pub.publish(trajectory);
     m_path_pub.publish(path);
-    ROS_INFO_STREAM("path published");
-
 }
 
 void LocalPlanner::costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
