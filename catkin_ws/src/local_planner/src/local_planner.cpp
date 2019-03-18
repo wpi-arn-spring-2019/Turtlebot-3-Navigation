@@ -5,27 +5,21 @@ namespace Turtlebot
 
 LocalPlanner::LocalPlanner(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {
-    m_costmap_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/local_costmap", 10, &LocalPlanner::costmapCallback, this);
-    m_goal_pose_sub = nh.subscribe<turtlebot_msgs::GoalPose>("/goal_pose", 1, &LocalPlanner::goalPoseCallback, this);
+    m_costmap_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 10, &LocalPlanner::costmapCallback, this);
+    m_goal_pose_sub = nh.subscribe<turtlebot_msgs::GoalPose>("/goal_pose", 10, &LocalPlanner::goalPoseCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/pf_pose", 10, &LocalPlanner::poseCallback, this);
+    m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &LocalPlanner::odomCallback, this);
     m_trajectory_pub = nh.advertise<turtlebot_msgs::Trajectory>("/trajectory", 10);
     m_occ_grid_pub = nh.advertise<nav_msgs::OccupancyGrid>("/planning_scene", 1);
     m_goal_pub = nh.advertise<geometry_msgs::PoseStamped>("/goal", 100);
     m_spline_pub = nh.advertise<nav_msgs::Path>("/spline", 100);
     getParams(pnh);
-    setupCollision();
-    setupCSpace();
 }
 
 LocalPlanner::~LocalPlanner(){}
 
 void LocalPlanner::getParams(ros::NodeHandle &pnh)
 {
-      double costmap_height_meters;
-      double costmap_width_meters;
-      pnh.getParam("/local_costmap_node/local_costmap_res", m_local_costmap_res);
-      pnh.getParam("/local_costmap_node/local_costmap_height", costmap_height_meters);
-      pnh.getParam("/local_costmap_node/local_costmap_width", costmap_width_meters);
       pnh.getParam("collision_buffer_distance", m_collision_buffer_distance);
       pnh.getParam("base_time_step_ms", m_base_time_step_ms);
       pnh.getParam("velocity_res", m_velocity_res);
@@ -36,39 +30,12 @@ void LocalPlanner::getParams(ros::NodeHandle &pnh)
       pnh.getParam("goal_heading_tolerance", m_goal_heading_tolerance);
       pnh.getParam("goal_speed_tolerance", m_goal_speed_tolerance);
       pnh.getParam("timeout_ms", m_timeout_ms);
-      m_local_costmap_height = costmap_height_meters / m_local_costmap_res;
-      m_local_costmap_width = costmap_width_meters / m_local_costmap_res;
+      pnh.getParam("turtlebot_radius", m_radius);
 }
 
 void LocalPlanner::setupCollision()
 {
-      tf::StampedTransform transform;
-      getTransform("front_right_middle_sonar_link", "back_right_middle_sonar_link", transform);
-      const double &length = fabs(transform.getOrigin().getX()) + 2 * m_collision_buffer_distance;
-      getTransform("rear_right_wheel", "rear_left_wheel", transform);
-      const double &width = fabs(transform.getOrigin().getX()) + 2 * m_collision_buffer_distance;
-      getTransform("back_right_middle_sonar_link", "base_link", transform);
-      const double &center_offset = fabs(transform.getOrigin().getY());
-      const int &num_pts = length * width / m_local_costmap_res;
-      int row = 0;
-      int col = 0;
-      for(int i = 0; i < num_pts; i++)
-      {
-          tf::Point pt;
-          pt.setX(col * m_local_costmap_res);
-          pt.setY(row * m_local_costmap_res - center_offset);
-          pt.setZ(0);
-          m_collision_pts.push_back(pt);
-          if(col > int(width / m_local_costmap_res))
-          {
-              row++;
-              col = 0;
-          }
-          else
-          {
-              col++;
-          }
-      }
+
 }
 
 void LocalPlanner::setupCSpace()
@@ -102,34 +69,12 @@ void LocalPlanner::planPath()
         std::pair<bool, GraphNode> goal_result = checkForGoal(current_node);
         if(goal_result.first)
         {
-            ROS_INFO_STREAM("Path found in " << duration.toSec() << " seconds");
+            ROS_INFO_STREAM("Path found in " << duration.toSec() << " seconds " << m_closed_nodes.size());
             break;
         }
         closeNode(current_node);
         expandFrontier(current_node);
-        if(count == 1)
-        {
-            count = 0;
-            //calcOccGrid();
-        }
-        count++;
     }        
-}
-
-void LocalPlanner::getTransform(const std::string &link1, const std::string &link2, tf::StampedTransform &transform) const
-{
-    while(!listener.canTransform(link1, link2, ros::Time(0)))
-    {
-        ros::Duration(0.01).sleep();
-    }
-    try
-    {
-        listener.lookupTransform(link1, link2, ros::Time(0), transform);
-    }
-    catch(tf::TransformException ex)
-    {
-        ROS_ERROR("%s", ex.what());
-    }
 }
 
 void LocalPlanner::initializePlanner()
@@ -150,8 +95,10 @@ void LocalPlanner::clearFrontier()
     q.setY(m_pose->pose.orientation.y);
     q.setZ(m_pose->pose.orientation.z);
     tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-    const double &vel = std::sqrt(std::pow(m_prius_velocity.linear.x, 2) + std::pow(m_prius_velocity.linear.y, 2));
-    const GraphNode &node = GraphNode(Point<double>(0.0, 0.0), Point<double>(0.0, 0.0), yaw, vel, 0.0, std::numeric_limits<double>::infinity());
+    const double &vel = std::sqrt(std::pow(m_turtlebot_velocity.linear.x, 2) + std::pow(m_turtlebot_velocity.linear.y, 2));
+    const GraphNode &node = GraphNode(Point<double>(m_pose->pose.position.x, m_pose->pose.position.y),
+                                      Point<double>(m_pose->pose.position.x, m_pose->pose.position.y),
+                                      yaw, vel, 0.0, std::numeric_limits<double>::infinity());
     m_frontier.push(node);
     openNode(node);
 }
@@ -323,7 +270,6 @@ const double LocalPlanner::calcH(const Point<double> &pt, const Point<double> &c
     const double &target_heading = calcTargetHeading(cur_pt, velocity, spline);
     const double &heading_diff = fabs(target_heading - heading);
     double heading_heuristic = heading_diff / M_PI * 250;
-    const double &costmap_value = abs(getCSpaceValue(cartesianToCSpace(pt)));
     double velocity_heuristic = 100 - velocity / m_goal_pose->max_speed * 100;
     if(checkVelH(pt, heading, velocity))
     {
@@ -437,20 +383,14 @@ void LocalPlanner::mapCostmapToCSpace(const nav_msgs::OccupancyGrid::ConstPtr &l
 
 const int &LocalPlanner::calcGridLocation(const Point<int> &pt) const
 {
-    const int &location = m_local_costmap_height * m_local_costmap_width - pt.x * m_local_costmap_height - pt.y - 1;
+    const double &resolution = m_map->info.resolution;
+    const double &height = m_map->info.height;
+    const double &origin_x = m_map->info.origin.position.x;
+    const double &origin_y = m_map->info.origin.position.y;
+    const int &x = (pt.x - origin_x) / resolution;
+    const int &y = (pt.y - origin_y) / resolution;
+    const int &location = x + y * height;
     return location;
-}
-
-const int LocalPlanner::getCSpaceValue(const Point<int> &pt) const
-{
-    return m_c_space[pt.x][pt.y];
-}
-
-const Point<int> LocalPlanner::cartesianToCSpace(const Point<double> &pt)
-{
-    const int &x = m_c_space.size() / 2 + pt.x / m_local_costmap_res - 1;
-    const int &y = m_c_space.size() / 2 - pt.y / m_local_costmap_res - 1;
-    return Point<int>(x, y);
 }
 
 void LocalPlanner::clearVisited()
@@ -476,60 +416,12 @@ void LocalPlanner::markVisited(const Point<double> &pt)
     }
 }
 
-void LocalPlanner::calcOccGrid()
-{
-    tf::StampedTransform transform;
-    tf::TransformListener listener;
-    nav_msgs::OccupancyGrid occ_grid;
-    int m_grid_array_length = int(m_local_costmap_height * m_local_costmap_width);
-    occ_grid.data.clear();
-    for(int i = 0; i < m_grid_array_length; i++)
-    {
-        occ_grid.data.push_back(-1);
-    }
-    while(!listener.canTransform("/center_laser_link", "/base_link", ros::Time(0)))
-    {
-        continue;
-    }
-    try
-    {
-        listener.lookupTransform("/base_link", "/center_laser_link", ros::Time(0), transform);
-    }
-    catch(tf::TransformException  ex)
-    {
-        ROS_ERROR("%s", ex.what());
-    }
-    occ_grid.header.frame_id = "base_link";
-    occ_grid.info.resolution = m_local_costmap_res;
-    occ_grid.info.origin.position.x = -m_local_costmap_width * m_local_costmap_res / 2 + transform.getOrigin().getX();
-    occ_grid.info.origin.position.y = -m_local_costmap_height * m_local_costmap_res / 2 + transform.getOrigin().getY();
-    occ_grid.info.origin.position.z = 0;
-    occ_grid.info.origin.orientation.w = transform.getRotation().getW();
-    occ_grid.info.origin.orientation.x = transform.getRotation().getX();
-    occ_grid.info.origin.orientation.y = transform.getRotation().getY();
-    occ_grid.info.origin.orientation.z = transform.getRotation().getZ();
-    occ_grid.info.height = m_local_costmap_height;
-    occ_grid.info.width = m_local_costmap_width;
-    for(int i = 0; i < m_c_space_visited.size(); i++)
-    {
-        for(int j = 0; j < m_c_space_visited[0].size(); j++)
-        {
-            auto location = calcGridLocation(Point<int>(i, j));
-            if(m_c_space_visited[i][j] == 1)
-            {
-                occ_grid.data[location] = 100;
-            }
-        }
-    }
-    publishOccGrid(occ_grid);
-}
-
 void LocalPlanner::pubSpline(const Spline1d &spline)
 {
-    double it =0;
+    double it = 0;
     double rez = 0.01;
     nav_msgs::Path path;
-    path.header.frame_id = "base_link";
+    path.header.frame_id = "/map";
     while(it < 1)
     {
         const Eigen::MatrixXd &spline_pt = spline(it);
@@ -551,20 +443,44 @@ void LocalPlanner::publishOccGrid(const nav_msgs::OccupancyGrid &grid)
 
 void LocalPlanner::costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
 {
-    mapCostmapToCSpace(msg);
+    if(!m_have_costmap)
+    {
+        m_have_costmap = true;
+        m_local_costmap_height = msg->info.height;
+        m_local_costmap_width = msg->info.width;
+        m_local_costmap_res = msg->info.resolution;
+        setupCollision();
+        setupCSpace();
+    }
+    m_map = msg;
 }
 
 void LocalPlanner::goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &msg)
 {
-    m_goal_pose = msg;
-    planPath();
+    if(m_have_costmap && m_have_pose && m_have_odom)
+    {
+        m_goal_pose = msg;
+        planPath();
+    }
 }
 
 void LocalPlanner::poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
+    if(!m_have_pose)
+    {
+        m_have_pose = true;
+    }
     m_pose = msg;
 }
 
+void LocalPlanner::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
+{
+    if(!m_have_odom)
+    {
+        m_have_odom = true;
+    }
+    m_turtlebot_velocity = msg->twist.twist;
+}
 }
 
 

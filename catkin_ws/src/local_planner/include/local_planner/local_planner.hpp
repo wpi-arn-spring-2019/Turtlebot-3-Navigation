@@ -8,6 +8,7 @@
 #include <geometry_msgs/Twist.h>
 #include <local_planner_types.hpp>
 #include <nav_msgs/OccupancyGrid.h>
+#include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <turtlebot_msgs/GoalPose.h>
 #include <turtlebot_msgs/Trajectory.h>
@@ -35,6 +36,7 @@ private:
     void costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
     void goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
+    void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
 
     //setup methods
     void getParams(ros::NodeHandle &pnh);
@@ -45,7 +47,6 @@ private:
 
     //expansion
     void planPath();
-    void getTransform(const std::string &link1, const std::string &link2, tf::StampedTransform &transform) const;
     void initializePlanner();
     void clearFrontier();
     void openNode(const GraphNode &node);
@@ -75,11 +76,8 @@ private:
 
     //helper functions
     const int &calcGridLocation(const Point<int> &pt) const;
-    const int getCSpaceValue(const Point<int> &pt) const;
-    const Point<int> cartesianToCSpace(const Point<double> &pt);
     void clearVisited();
     void markVisited(const Point<double> &pt);
-    void calcOccGrid();
     void publishOccGrid(const nav_msgs::OccupancyGrid &grid);
     void pubSpline(const Spline1d &spline);
 
@@ -87,6 +85,7 @@ private:
     ros::Subscriber m_costmap_sub;
     ros::Subscriber m_goal_pose_sub;
     ros::Subscriber m_pose_sub;
+    ros::Subscriber m_odom_sub;
     ros::Publisher m_occ_grid_pub;
     ros::Publisher m_path_pub;
     ros::Publisher m_trajectory_pub;
@@ -99,11 +98,6 @@ private:
     std::priority_queue<GraphNode, std::vector<GraphNode>, GraphNode::CheaperCost> m_frontier;
     std::vector<GraphNode> m_open_nodes;
     std::vector<GraphNode> m_closed_nodes;
-
-    //c space
-    Graph m_c_space;
-    Graph m_c_space_visited;
-
 
     //collision
     std::vector<tf::Point> m_collision_pts;
@@ -127,12 +121,19 @@ private:
     double m_goal_heading_tolerance;
     double m_goal_speed_tolerance;
     double m_timeout_ms;
+    double m_radius;
 
     //callback refs
     nav_msgs::OccupancyGrid::ConstPtr m_local_costmap;
     turtlebot_msgs::GoalPose::ConstPtr m_goal_pose;
-    geometry_msgs::Twist m_prius_velocity;
+    nav_msgs::OccupancyGrid::ConstPtr m_map;
+    geometry_msgs::Twist m_turtlebot_velocity;
     geometry_msgs::PoseStamped::ConstPtr m_pose;
+
+    //flags
+    bool m_have_costmap = false;
+    bool m_have_pose = false;
+    bool m_have_odom = false;
 };
 
 }

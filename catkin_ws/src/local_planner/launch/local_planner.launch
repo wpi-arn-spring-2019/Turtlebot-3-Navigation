@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+    <node name="local_planner_node" pkg="local_planner" type="local_planner_node" output="screen">
+        <rosparam command="load" file="$(find local_planner)/params/local_planner_params.yaml"/>
+    </node>
+</launch>
