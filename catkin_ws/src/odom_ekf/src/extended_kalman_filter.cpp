@@ -254,6 +254,12 @@ void ExtendedKalmanFilter::pubOdom(const Eigen::MatrixXf &u)
     m_odom_filtered.twist.twist.linear.x = u(3);
     m_odom_filtered.twist.twist.linear.y = u(4);
     m_odom_filtered.twist.twist.angular.z = u(5);
+    m_odom_filtered.pose.covariance[0] = m_covariance(0, 0);
+    m_odom_filtered.pose.covariance[7] = m_covariance(1, 1);
+    m_odom_filtered.pose.covariance[35] = m_covariance(2, 2);
+    m_odom_filtered.twist.covariance[0] = m_covariance(3, 3);
+    m_odom_filtered.twist.covariance[7] = m_covariance(4, 4);
+    m_odom_filtered.twist.covariance[35] = m_covariance(5, 5);
     m_odom_pub.publish(m_odom_filtered);
 }
 

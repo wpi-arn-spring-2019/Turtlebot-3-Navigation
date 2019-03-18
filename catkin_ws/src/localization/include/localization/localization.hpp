@@ -78,6 +78,7 @@ private:
     bool m_initialized = false;
     bool m_have_pose_estimate = false;
 
+    RandomGenerator m_rng;
     GaussianGenerator *m_gen_s1;
     GaussianGenerator *m_gen_st;
     GaussianGenerator *m_gen_s2;

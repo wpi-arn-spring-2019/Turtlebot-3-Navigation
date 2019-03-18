@@ -6,7 +6,7 @@ namespace Turtlebot
 Localization::Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {
     m_scan_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 10, &Localization::laserScanCallback, this);
-    m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom", 10, &Localization::odomCallback, this);
+    m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &Localization::odomCallback, this);
     m_map_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, &Localization::mapCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1, &Localization::poseCallback, this);
     m_particle_pub = nh.advertise<visualization_msgs::MarkerArray>("/particles", 1);
@@ -138,8 +138,8 @@ void Localization::takeActionParticles(std::deque<Particle> &particles)
         const double &sigma_rot1_ = sigma_rot1 + m_gen_s1->operator ()();
         const double &sigma_trans_ = sigma_trans + m_gen_st->operator ()();
         const double &sigma_rot2_ = sigma_rot2 + m_gen_s2->operator ()();
-        const double &x = xi + sigma_trans_ * sin (yawi + sigma_rot1_);
-        const double &y = yi + sigma_trans_ * cos (yawi + sigma_rot1_);
+        const double &x = xi + sigma_trans_ * cos (yawi + sigma_rot1_);
+        const double &y = yi + sigma_trans_ * sin (yawi + sigma_rot1_);
         const double &yaw = yawi + sigma_rot1_ + sigma_rot2_;
         particle.pose.setOrigin(tf::Vector3(x, y, 0));
         particle.pose.setRotation(tf::createQuaternionFromYaw(yaw));
@@ -194,7 +194,7 @@ const double Localization::calcRotationScore(const tf::Quaternion &particle_q, c
     {
         d_yaw = 0.001;
     }
-    return 5.0f / d_yaw;
+    return 1.0f / d_yaw;
 }
 
 void Localization::pruneAndNormalizeParticles()
@@ -387,26 +387,25 @@ void Localization::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
     {
         m_have_odom = true;
         m_prev_odom = msg;
-        RandomGenerator rng;
-        rng.seed(ros::Time::now().toSec());
-        const double &cov_trans = sqrt(msg->pose.covariance[0] + msg->pose.covariance[7]);
-        const double &cov_rot = std::sqrt(msg->pose.covariance[35]);
-        const double &cov_sigma_rot1 = cov_rot + cov_trans;
-        const double &cov_sigma_trans = cov_trans + 2 * cov_rot;
-        const double &cov_sigma_rot2 = cov_rot + cov_trans;
-        GaussianDistribution s1(0.0, cov_sigma_rot1);
-        GaussianDistribution st(0.0, cov_sigma_trans);
-        GaussianDistribution s2(0.0, cov_sigma_rot2);
+        m_rng.seed(ros::Time::now().toSec());
         GaussianDistribution sens_x(0.0, std::sqrt(m_sensor_var_x));
         GaussianDistribution sens_y(0.0, std::sqrt(m_sensor_var_y));
         GaussianDistribution sens_yaw(0.0, std::sqrt(m_sensor_var_yaw));
-        m_gen_s1 = new GaussianGenerator(rng, s1);
-        m_gen_st = new GaussianGenerator(rng, st);
-        m_gen_s2 = new GaussianGenerator(rng, s2);
-        m_gen_sens_x = new GaussianGenerator(rng, sens_x);
-        m_gen_sens_y = new GaussianGenerator(rng, sens_y);
-        m_gen_sens_yaw = new GaussianGenerator(rng, sens_yaw);
+        m_gen_sens_x = new GaussianGenerator(m_rng, sens_x);
+        m_gen_sens_y = new GaussianGenerator(m_rng, sens_y);
+        m_gen_sens_yaw = new GaussianGenerator(m_rng, sens_yaw);
     }
+    const double &cov_trans = sqrt(msg->pose.covariance[0] + msg->pose.covariance[7]);
+    const double &cov_rot = std::sqrt(msg->pose.covariance[35]);
+    const double &cov_sigma_rot1 = cov_rot + cov_trans;
+    const double &cov_sigma_trans = cov_trans + 2 * cov_rot;
+    const double &cov_sigma_rot2 = cov_rot + cov_trans;
+    GaussianDistribution s1(0.0, cov_sigma_rot1);
+    GaussianDistribution st(0.0, cov_sigma_trans);
+    GaussianDistribution s2(0.0, cov_sigma_rot2);
+    m_gen_s1 = new GaussianGenerator(m_rng, s1);
+    m_gen_st = new GaussianGenerator(m_rng, st);
+    m_gen_s2 = new GaussianGenerator(m_rng, s2);
     m_odom = msg;
 }
 
