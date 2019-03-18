@@ -21,7 +21,7 @@ LocalPlanner::~LocalPlanner(){}
 void LocalPlanner::getParams(ros::NodeHandle &pnh)
 {
       pnh.getParam("collision_buffer_distance", m_collision_buffer_distance);
-      pnh.getParam("base_time_step_ms", m_base_time_step_ms);
+      pnh.getParam("time_step_ms", m_time_step_ms);
       pnh.getParam("velocity_res", m_velocity_res);
       pnh.getParam("heading_res", m_heading_res);
       pnh.getParam("max_yaw_rate", m_max_yaw_rate);
@@ -31,21 +31,25 @@ void LocalPlanner::getParams(ros::NodeHandle &pnh)
       pnh.getParam("goal_speed_tolerance", m_goal_speed_tolerance);
       pnh.getParam("timeout_ms", m_timeout_ms);
       pnh.getParam("turtlebot_radius", m_radius);
+      pnh.getParam("angular_col_res", m_angular_col_res);
+      pnh.getParam("radial_col_res", m_radial_col_res);
 }
 
 void LocalPlanner::setupCollision()
 {
-
-}
-
-void LocalPlanner::setupCSpace()
-{
-    for(int i = 0; i < m_local_costmap_width; i++)
+    const int &num_points_radial = (m_radius + m_collision_buffer_distance) / m_radial_col_res;
+    const int &num_points_angular = 2 * M_PI / m_angular_col_res;
+    for(int i = 0; i < num_points_radial; i++)
     {
-        m_c_space.push_back({});
-        for(int j = 0; j < m_local_costmap_height; j++)
+        for(int j = 0; j < num_points_angular; j++)
         {
-            m_c_space[i].push_back(0);
+            const double &x = i * m_radial_col_res * cos(j * m_angular_col_res);
+            const double &y = i * m_radial_col_res * sin(j * m_angular_col_res);
+            tf::Point pt;
+            pt.setX(x);
+            pt.setY(y);
+            pt.setZ(0);
+            m_collision_pts.push_back(pt);
         }
     }
 }
@@ -55,7 +59,6 @@ void LocalPlanner::planPath()
     initializePlanner();
     const ros::Time &start_time = ros::Time::now();
     ros::Duration duration;
-    int count = 0;
     while(true)
     {
         duration = ros::Time::now() - start_time;
@@ -69,7 +72,7 @@ void LocalPlanner::planPath()
         std::pair<bool, GraphNode> goal_result = checkForGoal(current_node);
         if(goal_result.first)
         {
-            ROS_INFO_STREAM("Path found in " << duration.toSec() << " seconds " << m_closed_nodes.size());
+            ROS_INFO_STREAM("Path found in " << duration.toSec() << " seconds ");
             break;
         }
         closeNode(current_node);
@@ -79,8 +82,8 @@ void LocalPlanner::planPath()
 
 void LocalPlanner::initializePlanner()
 {
-    clearVisited();
-    clearFrontier();    
+    clearFrontier();
+    setupCollision();
 }
 
 void LocalPlanner::clearFrontier()
@@ -146,7 +149,6 @@ void LocalPlanner::expandFrontier(const GraphNode &current_node)
     const std::vector<GraphNode> &neighbors = getNeighbors(current_node);
     for(const auto &neighbor : neighbors)
     {
-        markVisited(neighbor.child_point);
         const std::vector<GraphNode>::iterator &it_closed = std::find(m_closed_nodes.begin(), m_closed_nodes.end(), neighbor);
         if(it_closed != m_closed_nodes.end())
         {
@@ -172,7 +174,6 @@ const std::vector<GraphNode> LocalPlanner::getNeighbors(const GraphNode &current
     std::vector<GraphNode> neighbors = {};
     const Spline1d &spline = calcSpline(current_node.child_point, current_node.heading);
     pubSpline(spline);
-    calcTimeStep(current_node.velocity);
     const std::vector<double> &possible_velocities = calcPossibleVelocities(current_node);
     const std::vector<double> &possible_headings = calcPossibleHeadings(current_node);    
     for(const auto &velocity : possible_velocities)
@@ -244,15 +245,6 @@ const tf::Transform LocalPlanner::calcNeighborTransform(const Point<double> &pt,
     transform.setOrigin(tf::Vector3(pt.x, pt.y, 0));
     transform.setRotation(tf::createQuaternionFromYaw(heading));
     return transform;
-}
-
-void LocalPlanner::calcTimeStep(double velocity)
-{
-    if(velocity < 1)
-    {
-        velocity = 1;
-    }
-    m_time_step_ms = m_base_time_step_ms / (velocity);
 }
 
 const double LocalPlanner::calcG(const Point<double> &pt, const GraphNode &parent_node) const
@@ -347,11 +339,9 @@ const double LocalPlanner::calcDistanceBetween(const Point<double> &lhs, const P
 
 const bool LocalPlanner::checkForCollision(const tf::Transform &transform) const
 {
-    return false;
     for(const auto &pt : m_collision_pts)
     {
-        const tf::Point &t_pt = transform * pt;
-
+        const tf::Point &t_pt = transform * pt;   
         if(checkPointForCollision(t_pt))
         {
            return true;
@@ -362,26 +352,10 @@ const bool LocalPlanner::checkForCollision(const tf::Transform &transform) const
 
 const bool LocalPlanner::checkPointForCollision(const tf::Point &pt) const
 {
-    if(m_c_space[int(pt.x() / m_local_costmap_res)][int(pt.y() / m_local_costmap_res)] == 100)
-    {
-        return true;
-    }
-    return false;
+    return int(m_map->data[calcGridLocation(Point<double>(pt.getX(), pt.getY()))]) == 100;
 }
 
-void LocalPlanner::mapCostmapToCSpace(const nav_msgs::OccupancyGrid::ConstPtr &local_costmap)
-{
-    for(int i = 0; i < m_local_costmap_width; i++)
-    {
-        for(int j = 0; j < m_local_costmap_height; j++)
-        {
-            const int &location = calcGridLocation(Point<int>(i, j));
-            m_c_space[i][j] = local_costmap->data[location];
-        }
-    }
-}
-
-const int &LocalPlanner::calcGridLocation(const Point<int> &pt) const
+const int &LocalPlanner::calcGridLocation(const Point<double> &pt) const
 {
     const double &resolution = m_map->info.resolution;
     const double &height = m_map->info.height;
@@ -391,29 +365,6 @@ const int &LocalPlanner::calcGridLocation(const Point<int> &pt) const
     const int &y = (pt.y - origin_y) / resolution;
     const int &location = x + y * height;
     return location;
-}
-
-void LocalPlanner::clearVisited()
-{
-    m_c_space_visited.clear();
-    for(int i = 0; i < m_local_costmap_width; i++)
-    {
-        m_c_space_visited.push_back({});
-        for(int j = 0; j < m_local_costmap_height; j++)
-        {
-            m_c_space_visited[i].push_back(0);
-        }
-    }
-}
-
-void LocalPlanner::markVisited(const Point<double> &pt)
-{
-    const int &x = m_local_costmap_width / 2 - pt.y / m_local_costmap_res;
-    const int &y = m_local_costmap_height / 2 - pt.x / m_local_costmap_res;
-    if(m_c_space_visited[x][y] != 100)
-    {
-        m_c_space_visited[x][y] = 1;
-    }
 }
 
 void LocalPlanner::pubSpline(const Spline1d &spline)
@@ -449,8 +400,6 @@ void LocalPlanner::costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
         m_local_costmap_height = msg->info.height;
         m_local_costmap_width = msg->info.width;
         m_local_costmap_res = msg->info.resolution;
-        setupCollision();
-        setupCSpace();
     }
     m_map = msg;
 }

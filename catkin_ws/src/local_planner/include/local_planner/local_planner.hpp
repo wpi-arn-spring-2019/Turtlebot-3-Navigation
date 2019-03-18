@@ -41,7 +41,6 @@ private:
     //setup methods
     void getParams(ros::NodeHandle &pnh);
     void setupCollision();
-    void setupCSpace();
 
     //methods
 
@@ -59,7 +58,6 @@ private:
     const std::vector<double> calcPossibleVelocities(const GraphNode &current_node) const;
     const std::vector<double> calcPossibleHeadings(const GraphNode &current_node) const;   
     const tf::Transform calcNeighborTransform(const Point<double> &pt, const double &heading) const;
-    void calcTimeStep(double velocity);
 
     //cost functions
     const double calcG(const Point<double> &pt, const GraphNode &parent_node) const;
@@ -72,12 +70,9 @@ private:
     //collision
     const bool checkForCollision(const tf::Transform &transform) const;
     const bool checkPointForCollision(const tf::Point &pt) const;
-    void mapCostmapToCSpace(const nav_msgs::OccupancyGrid::ConstPtr &local_costmap);
 
     //helper functions
-    const int &calcGridLocation(const Point<int> &pt) const;
-    void clearVisited();
-    void markVisited(const Point<double> &pt);
+    const int &calcGridLocation(const Point<double> &pt) const;
     void publishOccGrid(const nav_msgs::OccupancyGrid &grid);
     void pubSpline(const Spline1d &spline);
 
@@ -112,7 +107,6 @@ private:
     int m_local_costmap_width;
     double m_collision_buffer_distance;
     double m_time_step_ms;
-    double m_base_time_step_ms;
     double m_velocity_res;
     double m_heading_res;
     double m_max_yaw_rate;
@@ -122,6 +116,8 @@ private:
     double m_goal_speed_tolerance;
     double m_timeout_ms;
     double m_radius;
+    double m_angular_col_res;
+    double m_radial_col_res;
 
     //callback refs
     nav_msgs::OccupancyGrid::ConstPtr m_local_costmap;
