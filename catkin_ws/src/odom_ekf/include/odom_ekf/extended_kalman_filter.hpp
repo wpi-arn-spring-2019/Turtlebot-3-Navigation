@@ -12,7 +12,7 @@ class ExtendedKalmanFilter
 {
 public:
     ExtendedKalmanFilter(ros::NodeHandle &nh, ros::NodeHandle &pnh);
-    ~ExtendedKalmanFilter();
+    ~ExtendedKalmanFilter() = default;
 
 private:
 
@@ -22,12 +22,17 @@ private:
     void initializeFilter(ros::NodeHandle &pnh);
     void filterOdom();
     const Eigen::MatrixXf calcG();
+    const Eigen::MatrixXf calcCovarianceBar(const Eigen::MatrixXf &G);
     const Eigen::MatrixXf calcUBar();
-
-
+    const Eigen::MatrixXf calczBar(const Eigen::MatrixXf &u_);
+    const Eigen::MatrixXf calcH(const Eigen::MatrixXf &u_);
+    const Eigen::MatrixXf calcKalmanGain(const Eigen::MatrixXf &cov_, const Eigen::MatrixXf &H);
+    const Eigen::MatrixXf calcU(const Eigen::MatrixXf &u_, const Eigen::MatrixXf &K);
+    void calcCovariance(const Eigen::MatrixXf & cov_, const Eigen::MatrixXf &H, const Eigen::MatrixXf &K);
 
     void integrateIMUToOdom();
-    void pubOdom();
+    void setz();
+    void pubOdom(const Eigen::MatrixXf &u);
 
     ros::Subscriber m_odom_sub;
     ros::Subscriber m_imu_sub;
@@ -36,6 +41,8 @@ private:
     nav_msgs::Odometry m_odom_filtered;
 
     nav_msgs::Odometry::ConstPtr m_odom;
+    Eigen::MatrixXf m_z;
+    nav_msgs::Odometry::ConstPtr m_prev_odom;
     sensor_msgs::Imu::ConstPtr m_imu;
     sensor_msgs::Imu m_imu_at_odom;
     sensor_msgs::Imu m_imu_at_last_odom;
