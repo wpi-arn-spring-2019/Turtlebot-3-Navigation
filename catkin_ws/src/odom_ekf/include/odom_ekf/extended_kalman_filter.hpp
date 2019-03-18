@@ -22,7 +22,6 @@ private:
     void initializeFilter(ros::NodeHandle &pnh);
     void filterOdom();
     const Eigen::MatrixXf calcG();
-    const float checkSign(const float &val);
     const Eigen::MatrixXf calcUBar();
 
 
