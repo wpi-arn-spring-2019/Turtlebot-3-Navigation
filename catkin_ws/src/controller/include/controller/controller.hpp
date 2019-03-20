@@ -31,9 +31,8 @@ private:
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
     void pubControls(const geometry_msgs::Twist &control) const;
-
-    void initializeDynamicReconfigure(ros::NodeHandle &pnh);
     void updateDynamicReconfigure();
+
     void initializeController(ros::NodeHandle &pnh);
     const TurtlebotState getCurrentState();
     const TurtlebotState getDesiredState() const;

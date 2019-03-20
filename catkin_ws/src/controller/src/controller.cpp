@@ -12,7 +12,6 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_call_type = boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2);
     m_server = new dynamic_reconfigure::Server<controller::ControllerConfig>(m_config_mutex);
     m_server->setCallback(m_call_type);
-    initializeDynamicReconfigure(pnh);
     initializeController(pnh);
 }
 
@@ -22,7 +21,7 @@ Controller::~Controller()
     delete m_pid_ff_cont;
 }
 
-void Controller::initializeDynamicReconfigure(ros::NodeHandle &pnh)
+void Controller::initializeController(ros::NodeHandle &pnh)
 {
     m_server->getConfigDefault(m_config);
     pnh.getParam("kp_w", m_kp_w);
@@ -37,13 +36,6 @@ void Controller::initializeDynamicReconfigure(ros::NodeHandle &pnh)
     m_config.kp_v = m_kp_v;
     m_config.ki_v = m_ki_v;
     m_config.kd_v = m_kd_v;
-    boost::recursive_mutex::scoped_lock lock(m_config_mutex);
-    m_server->updateConfig(m_config);
-    lock.unlock();
-}
-
-void Controller::initializeController(ros::NodeHandle &pnh)
-{
     std::string type;
     pnh.getParam("controller_type", type);
     if(std::string("pd_ff").find(type) != std::string::npos)
@@ -52,8 +44,9 @@ void Controller::initializeController(ros::NodeHandle &pnh)
     }
     else if(std::string("pid_ff").find(type) != std::string::npos)
     {
+        m_config.controller_type = 3;
         m_cont_type = controller_type::PID_FF;
-        m_pid_ff_cont = new PIDFeedForwardController();
+        m_pid_ff_cont = new PIDFeedForwardController();        
         m_pid_ff_cont->setGains(m_kp_w, m_ki_w, m_kd_w, m_kp_v, m_ki_v, m_kd_v);
     }
     else if(std::string("pd").find(type) != std::string::npos)
@@ -68,13 +61,15 @@ void Controller::initializeController(ros::NodeHandle &pnh)
     {
         ROS_ERROR("Invalid Controller Type Specified. Options Are: pd, pid, pd_ff, pid_ff");
     }
+    boost::recursive_mutex::scoped_lock lock(m_config_mutex);
+    m_server->updateConfig(m_config);
+    lock.unlock();
 }
 
 void Controller::control()
 {
     if(m_have_pose && m_have_odom && m_have_trajectory && !m_goal_reached)
     {
-        geometry_msgs::Twist control;
         switch(m_cont_type)
         {
         case PD:
@@ -88,10 +83,9 @@ void Controller::control()
             break;
 
         case PID_FF:
-            control = m_pid_ff_cont->getControls(getCurrentState(), getDesiredState());
+            pubControls(m_pid_ff_cont->getControls(getCurrentState(), getDesiredState()));
             break;
-        }
-        pubControls(control);
+        }        
     }
 }
 
@@ -228,7 +222,33 @@ void Controller::pubControls(const geometry_msgs::Twist &control) const
 
 void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config, uint32_t level)
 {
-
+    if(config.controller_type != m_config.controller_type)
+    {
+        const int &type = config.controller_type;
+        if(type == 0)
+        {
+            m_cont_type = Controller::PD;
+        }
+        if(type == 1)
+        {
+            m_cont_type = Controller::PID;
+        }
+        if(type == 2)
+        {
+            m_cont_type = Controller::PD_FF;
+        }
+        if(type == 3)
+        {
+            m_cont_type = Controller::PID_FF;
+            m_pid_ff_cont = new PIDFeedForwardController;
+        }
+    }
+    m_kp_w = config.kp_w;
+    m_ki_w = config.ki_w;
+    m_kd_w = config.kd_w;
+    m_kp_v = config.kp_v;
+    m_ki_v = config.ki_v;
+    m_kd_v = config.kd_v;
 }
 
 void Controller::trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &msg)
