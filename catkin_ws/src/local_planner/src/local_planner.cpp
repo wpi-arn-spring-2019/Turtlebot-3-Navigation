@@ -186,8 +186,11 @@ const std::vector<GraphNode> LocalPlanner::getNeighbors(const GraphNode &current
     {
         for(const auto &heading : possible_headings)
         {
-            const double &x = current_node.child_point.x + velocity * m_time_step_ms / 1000 * cos(heading);
-            const double &y = current_node.child_point.y + velocity * m_time_step_ms / 1000 * sin(heading);
+            const double &acc = (velocity - current_node.velocity) / m_time_step_ms / 1000;
+            const double &x = current_node.child_point.x + (current_node.velocity * m_time_step_ms / 1000 +
+                                                            acc * std::pow(m_time_step_ms / 1000, 2) /  2) * cos(heading);
+            const double &y = current_node.child_point.y + (current_node.velocity * m_time_step_ms / 1000 +
+                                                            acc * std::pow(m_time_step_ms / 1000, 2) /  2) * sin(heading);
             const Point<double> new_pt(x, y);           
             const double &g = calcG(new_pt, current_node);
             const double &h = calcH(new_pt, current_node.child_point, heading, velocity, spline);

@@ -108,14 +108,14 @@ const TurtlebotState Controller::integrateDesiredStateToCurrentTime(const int &t
     double acc_linear = 0;
     if(traj_it >= 1)
     {
-        acc_ang = m_traj->yaw_rates[traj_it - 1] - m_traj->yaw_rates[traj_it];
-        acc_linear = m_traj->speeds[traj_it - 1] - m_traj->speeds[traj_it];
+        acc_ang = m_traj->yaw_rates[traj_it] - m_traj->yaw_rates[traj_it - 1];
+        acc_linear = m_traj->speeds[traj_it] - m_traj->speeds[traj_it - 1];
     }
-    const double &th_dot = m_traj->yaw_rates[traj_it] + acc_ang * dt;
-    const double &th = m_traj->headings[traj_it] + th_dot * dt + acc_ang * std::pow(dt, 2) / 2;
+    const double &th_dot = m_traj->yaw_rates[traj_it - 1] + acc_ang * dt;
+    const double &th = m_traj->headings[traj_it - 1] + th_dot * dt + acc_ang * std::pow(dt, 2) / 2;
     const double &v = m_traj->speeds[traj_it] + acc_linear * dt;
-    const double &x = m_traj->x_values[traj_it] + (v * dt + acc_linear * std::pow(dt, 2) / 2) * cos(th);
-    const double &y = m_traj->x_values[traj_it] + (v * dt + acc_linear * std::pow(dt, 2) / 2) * sin(th);
+    const double &x = m_traj->x_values[traj_it - 1] + (v * dt + acc_linear * std::pow(dt, 2) / 2) * cos(th);
+    const double &y = m_traj->x_values[traj_it - 1] + (v * dt + acc_linear * std::pow(dt, 2) / 2) * sin(th);
     return TurtlebotState(x, y, th, v, th_dot);
 
 }
