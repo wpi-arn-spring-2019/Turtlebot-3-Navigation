@@ -1,5 +1,7 @@
 #pragma once
 #include <ros/ros.h>
+#include <controller/ControllerConfig.h>
+#include <dynamic_reconfigure/server.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
@@ -24,11 +26,14 @@ public:
     void control();
 
 private:
+    void dynamicReconfigureCallback(controller::ControllerConfig &config, uint32_t level);
     void trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
     void pubControls(const geometry_msgs::Twist &control) const;
 
+    void initializeDynamicReconfigure(ros::NodeHandle &pnh);
+    void updateDynamicReconfigure();
     void initializeController(ros::NodeHandle &pnh);
     const TurtlebotState getCurrentState();
     const TurtlebotState getDesiredState() const;
@@ -40,6 +45,11 @@ private:
     ros::Subscriber m_pose_sub;
     ros::Subscriber m_odom_sub;
     ros::Publisher m_vel_pub;
+
+    dynamic_reconfigure::Server<controller::ControllerConfig> *m_server;
+    dynamic_reconfigure::Server<controller::ControllerConfig>::CallbackType m_call_type;
+    boost::recursive_mutex m_config_mutex;
+    controller::ControllerConfig m_config;
 
     ros::Time m_current_time;
 
@@ -53,9 +63,13 @@ private:
 
     enum controller_type{PD = 1, PID = 2, PD_FF = 3, PID_FF = 4};
     controller_type m_cont_type;
-    double m_kp;
-    double m_ki;
-    double m_kd;
+    double m_kp_w;
+    double m_ki_w;
+    double m_kd_w;
+    double m_kp_v;
+    double m_ki_v;
+    double m_kd_v;
+
 
     PIDFeedForwardController *m_pid_ff_cont;
 

@@ -1,1 +1,8 @@
 controller_type: "pid_ff"
+
+kp_w: 1
+ki_w: 1
+kd_w: 1
+kp_v: 1
+ki_v: 1
+kd_v: 1

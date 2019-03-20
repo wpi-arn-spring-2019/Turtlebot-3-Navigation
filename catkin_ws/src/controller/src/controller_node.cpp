@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 
     ros::NodeHandle pnh("~");
 
-    ros::Rate r(100);
+    ros::Rate r(100);  
 
     Turtlebot::Controller cont(nh, pnh);
 

@@ -9,12 +9,37 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/pf_pose", 10, &Controller::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &Controller::odomCallback, this);
     m_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+    m_call_type = boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2);
+    m_server = new dynamic_reconfigure::Server<controller::ControllerConfig>(m_config_mutex);
+    m_server->setCallback(m_call_type);
+    initializeDynamicReconfigure(pnh);
     initializeController(pnh);
 }
 
 Controller::~Controller()
 {
+    delete m_server;
     delete m_pid_ff_cont;
+}
+
+void Controller::initializeDynamicReconfigure(ros::NodeHandle &pnh)
+{
+    m_server->getConfigDefault(m_config);
+    pnh.getParam("kp_w", m_kp_w);
+    pnh.getParam("ki_w", m_ki_w);
+    pnh.getParam("kd_w", m_kd_w);
+    pnh.getParam("kp_v", m_kp_v);
+    pnh.getParam("ki_v", m_ki_v);
+    pnh.getParam("kd_v", m_kd_v);
+    m_config.kp_w = m_kp_w;
+    m_config.ki_w = m_ki_w;
+    m_config.kd_w = m_kd_w;
+    m_config.kp_v = m_kp_v;
+    m_config.ki_v = m_ki_v;
+    m_config.kd_v = m_kd_v;
+    boost::recursive_mutex::scoped_lock lock(m_config_mutex);
+    m_server->updateConfig(m_config);
+    lock.unlock();
 }
 
 void Controller::initializeController(ros::NodeHandle &pnh)
@@ -29,6 +54,7 @@ void Controller::initializeController(ros::NodeHandle &pnh)
     {
         m_cont_type = controller_type::PID_FF;
         m_pid_ff_cont = new PIDFeedForwardController();
+        m_pid_ff_cont->setGains(m_kp_w, m_ki_w, m_kd_w, m_kp_v, m_ki_v, m_kd_v);
     }
     else if(std::string("pd").find(type) != std::string::npos)
     {
@@ -198,6 +224,11 @@ void Controller::integrateOdomToCurrentTime()
 void Controller::pubControls(const geometry_msgs::Twist &control) const
 {
     m_vel_pub.publish(control);
+}
+
+void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config, uint32_t level)
+{
+
 }
 
 void Controller::trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &msg)
