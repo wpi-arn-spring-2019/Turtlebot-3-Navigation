@@ -5,12 +5,125 @@ namespace Turtlebot
 
 Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {
-
+    m_traj_sub = nh.subscribe<turtlebot_msgs::Trajectory>("/trajectory", 10, &Controller::trajectoryCallback, this);
+    m_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/pf_pose", 10, &Controller::poseCallback, this);
+    m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &Controller::odomCallback, this);
+    m_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
 }
 
 Controller::~Controller()
 {
 
+}
+
+void Controller::control()
+{
+    m_current_time = ros::Time::now();
+    integrateOdomToCurrentTime();
+    integratePoseToCurrentTime();
+}
+
+void Controller::integratePoseToCurrentTime()
+{
+    const double &dt = ros::Duration(m_current_time - m_pose->header.stamp).toSec();
+    const double &acc_x = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt;
+    const double &acc_y = (m_odom->twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt;
+    const double &acc_ang = (m_odom->twist.twist.angular.z - m_prev_odom->twist.twist.angular.z) / dt;
+    m_odom_at_pose.twist.twist.linear.x = m_odom->twist.twist.linear.x + acc_x * dt;
+    m_odom_at_pose.twist.twist.linear.y = m_odom->twist.twist.linear.y + acc_y * dt;
+    m_odom_at_pose.twist.twist.angular.z = m_odom->twist.twist.angular.z + acc_ang * dt;
+    tf::Quaternion q;
+    tf::quaternionMsgToTF(m_odom->pose.pose.orientation, q);
+    const double &yaw = tf::getYaw(q);
+    const double &radius_curvature = std::pow(m_odom_at_pose.twist.twist.linear.x, 2) +
+                                     std::pow(m_odom_at_pose.twist.twist.linear.y, 2) /
+                                     m_odom_at_pose.twist.twist.angular.z;
+    const double &yaw_f = yaw + m_odom_at_pose.twist.twist.linear.z * dt;
+    double x_f;
+    double y_f;
+    if(std::isnan(radius_curvature))
+    {
+        x_f = m_pose->pose.position.x + (m_odom->twist.twist.linear.x * dt + acc_x * std::pow(dt, 2) / 2) * cos(yaw);
+        y_f = m_pose->pose.position.y + (m_odom->twist.twist.linear.y * dt + acc_y * std::pow(dt, 2) / 2) * sin(yaw);
+    }
+    else
+    {
+        x_f = m_pose->pose.position.x + radius_curvature * cos(yaw_f) * cos(yaw);
+        y_f = m_pose->pose.position.y + radius_curvature * sin(yaw_f) * sin(yaw);
+    }
+    tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
+    q_f.normalize();
+    m_pose_at_control.position.x = x_f;
+    m_pose_at_control.position.y = y_f;
+    geometry_msgs::Quaternion q_;
+    tf::quaternionTFToMsg(q_f, q_);
+    m_pose_at_control.orientation = q_;
+}
+
+void Controller::integrateOdomToCurrentTime()
+{
+    const double &dt = ros::Duration(m_current_time - m_odom->header.stamp).toSec();
+    m_odom_at_pose.header.stamp = m_current_time;
+    const double &acc_x = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt;
+    const double &acc_y = (m_odom->twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt;
+    const double &acc_ang = (m_odom->twist.twist.angular.z - m_prev_odom->twist.twist.angular.z) / dt;
+    m_odom_at_pose.twist.twist.linear.x = m_odom->twist.twist.linear.x + acc_x * dt;
+    m_odom_at_pose.twist.twist.linear.y = m_odom->twist.twist.linear.y + acc_y * dt;
+    m_odom_at_pose.twist.twist.angular.z = m_odom->twist.twist.angular.z + acc_ang * dt;
+    tf::Quaternion q;
+    tf::quaternionMsgToTF(m_odom->pose.pose.orientation, q);
+    const double &yaw = tf::getYaw(q);
+    const double &radius_curvature = std::pow(m_odom_at_pose.twist.twist.linear.x, 2) +
+                                     std::pow(m_odom_at_pose.twist.twist.linear.y, 2) /
+                                     m_odom_at_pose.twist.twist.angular.z;
+    const double &yaw_f = yaw + m_odom_at_pose.twist.twist.linear.z * dt;
+    double x_f;
+    double y_f;
+    if(std::isnan(radius_curvature))
+    {
+        x_f = m_odom->pose.pose.position.x + (m_odom->twist.twist.linear.x * dt + acc_x * std::pow(dt, 2) / 2) * cos(yaw);
+        y_f = m_odom->pose.pose.position.y + (m_odom->twist.twist.linear.y * dt + acc_y * std::pow(dt, 2) / 2) * sin(yaw);
+    }
+    else
+    {
+        x_f = m_odom->pose.pose.position.x + radius_curvature * cos(yaw_f) * cos(yaw);
+        y_f = m_odom->pose.pose.position.y + radius_curvature * sin(yaw_f) * sin(yaw);
+    }
+    tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
+    q_f.normalize();
+    m_odom_at_pose.pose.pose.position.x = x_f;
+    m_odom_at_pose.pose.pose.position.y = y_f;
+    geometry_msgs::Quaternion q_;
+    tf::quaternionTFToMsg(q_f, q_);
+    m_odom_at_pose.pose.pose.orientation = q_;
+}
+
+void Controller::trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &msg)
+{
+    if(!m_have_trajectory)
+    {
+        m_have_trajectory = true;
+    }
+    m_traj = msg;
+}
+
+void Controller::poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
+{
+    if(!m_have_pose)
+    {
+        m_have_pose = true;
+    }
+    m_pose = msg;
+}
+
+void Controller::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
+{
+    if(!m_have_odom)
+    {
+        m_have_odom = true;
+        m_prev_odom = msg;
+    }
+    m_odom = msg;
 }
 
 }

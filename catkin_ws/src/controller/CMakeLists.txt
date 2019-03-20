@@ -8,7 +8,10 @@ add_compile_options(-std=c++11)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  geometry_msgs
+  nav_msgs
   roscpp
+  tf
   turtlebot_msgs
 )
 
@@ -104,7 +107,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include/controller
 #  LIBRARIES controller
-#  CATKIN_DEPENDS roscpp turtlebot_msgs
+  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp tf turtlebot_msgs
 #  DEPENDS system_lib
 )
 

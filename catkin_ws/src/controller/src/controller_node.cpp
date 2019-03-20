@@ -11,9 +11,13 @@ int main(int argc, char **argv)
 
     ros::Rate r(100);
 
+    Turtlebot::Controller cont(nh, pnh);
+
     while(ros::ok)
     {
         ros::spinOnce();
+
+        cont.control();
 
         r.sleep();
     }
