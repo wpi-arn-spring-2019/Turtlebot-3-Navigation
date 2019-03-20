@@ -3,8 +3,13 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
+#include <pd_controller.hpp>
+#include <pid_controller.hpp>
+#include <pd_ff_controller.hpp>
+#include <pid_ff_controller.hpp>
 #include <tf/tf.h>
 #include <turtlebot_msgs/Trajectory.h>
+#include <turtlebot_state.hpp>
 
 
 namespace Turtlebot
@@ -22,8 +27,12 @@ private:
     void trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
-    void pubControls(const geometry_msgs::Twist &control);
+    void pubControls(const geometry_msgs::Twist &control) const;
 
+    void initializeController(ros::NodeHandle &pnh);
+    const TurtlebotState getCurrentState();
+    const TurtlebotState getDesiredState() const;
+    const TurtlebotState integrateDesiredStateToCurrentTime(const int &traj_it, const double &dt) const;
     void integratePoseToCurrentTime();
     void integrateOdomToCurrentTime();
 
@@ -42,6 +51,16 @@ private:
     nav_msgs::Odometry m_odom_at_pose;
     nav_msgs::Odometry m_odom_at_control;
 
+    enum controller_type{PD = 1, PID = 2, PD_FF = 3, PID_FF = 4};
+    controller_type m_cont_type;
+    double m_kp;
+    double m_ki;
+    double m_kd;
+
+    PIDFeedForwardController *m_pid_ff_cont;
+
+
+    bool m_goal_reached = false;
     bool m_have_trajectory = false;
     bool m_have_pose = false;
     bool m_have_odom = false;

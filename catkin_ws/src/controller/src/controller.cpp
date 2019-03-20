@@ -9,18 +9,115 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/pf_pose", 10, &Controller::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &Controller::odomCallback, this);
     m_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+    initializeController(pnh);
 }
 
 Controller::~Controller()
 {
+    delete m_pid_ff_cont;
+}
 
+void Controller::initializeController(ros::NodeHandle &pnh)
+{
+    std::string type;
+    pnh.getParam("controller_type", type);
+    if(std::string("pd_ff").find(type) != std::string::npos)
+    {
+
+    }
+    else if(std::string("pid_ff").find(type) != std::string::npos)
+    {
+        m_cont_type = controller_type::PID_FF;
+        m_pid_ff_cont = new PIDFeedForwardController();
+    }
+    else if(std::string("pd").find(type) != std::string::npos)
+    {
+
+    }
+    else if(std::string("pid").find(type) != std::string::npos)
+    {
+
+    }
+    else
+    {
+        ROS_ERROR("Invalid Controller Type Specified. Options Are: pd, pid, pd_ff, pid_ff");
+    }
 }
 
 void Controller::control()
 {
+    if(m_have_pose && m_have_odom && m_have_trajectory && !m_goal_reached)
+    {
+        geometry_msgs::Twist control;
+        switch(m_cont_type)
+        {
+        case PD:
+
+            break;
+        case PID:
+
+            break;
+        case PD_FF:
+
+            break;
+
+        case PID_FF:
+            control = m_pid_ff_cont->getControls(getCurrentState(), getDesiredState());
+            break;
+        }
+        pubControls(control);
+    }
+}
+
+const TurtlebotState Controller::getCurrentState()
+{
     m_current_time = ros::Time::now();
     integrateOdomToCurrentTime();
     integratePoseToCurrentTime();
+    const double &x = m_pose_at_control.position.x;
+    const double &y = m_pose_at_control.position.y;
+    tf::Quaternion q;
+    tf::quaternionMsgToTF(m_pose_at_control.orientation, q);
+    const double &th = tf::getYaw(q);
+    const double &v = std::sqrt(std::pow(m_odom_at_control.twist.twist.linear.x, 2)+
+                                std::pow(m_odom_at_control.twist.twist.linear.y, 2));
+    const double &th_dot = m_odom_at_control.twist.twist.angular.z;
+    return TurtlebotState(x, y, th, v, th_dot);
+}
+
+const TurtlebotState Controller::getDesiredState() const
+{
+    const double &start_time = m_traj->header.stamp.toSec();
+    double dt = m_current_time.toSec() - start_time;
+    int traj_it = 0;
+    while(dt >= 0)
+    {
+        if(traj_it >= m_traj->durations.size() && !m_goal_reached)
+        {
+            ROS_ERROR("Reached End of Trajectory Without Receiving New Goal State");
+        }
+        dt += m_traj->durations[traj_it];
+        traj_it++;
+    }
+    return integrateDesiredStateToCurrentTime(traj_it, dt);
+}
+
+const TurtlebotState Controller::integrateDesiredStateToCurrentTime(const int &traj_it, const double &dt) const
+{
+    double acc_ang = 0;
+    double acc_linear = 0;
+    if(traj_it >= 1)
+    {
+        acc_ang = m_traj->yaw_rates[traj_it - 1] - m_traj->yaw_rates[traj_it];
+        acc_linear = m_traj->speeds[traj_it - 1] - m_traj->speeds[traj_it];
+    }
+    const double &th_dot = m_traj->yaw_rates[traj_it] + acc_ang * dt;
+    const double &th = m_traj->headings[traj_it] + th_dot * dt + acc_ang * std::pow(dt, 2) / 2;
+    const double &v = m_traj->speeds[traj_it] + acc_linear * dt;
+    const double &x = m_traj->x_values[traj_it] + (v * dt + acc_linear * std::pow(dt, 2) / 2) * cos(th);
+    const double &y = m_traj->x_values[traj_it] + (v * dt + acc_linear * std::pow(dt, 2) / 2) * sin(th);
+    return TurtlebotState(x, y, th, v, th_dot);
+
 }
 
 void Controller::integratePoseToCurrentTime()
@@ -98,12 +195,18 @@ void Controller::integrateOdomToCurrentTime()
     m_odom_at_pose.pose.pose.orientation = q_;
 }
 
+void Controller::pubControls(const geometry_msgs::Twist &control) const
+{
+    m_vel_pub.publish(control);
+}
+
 void Controller::trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &msg)
 {
     if(!m_have_trajectory)
     {
         m_have_trajectory = true;
     }
+    m_goal_reached = false;
     m_traj = msg;
 }
 
