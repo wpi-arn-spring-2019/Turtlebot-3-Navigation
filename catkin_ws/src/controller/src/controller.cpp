@@ -154,7 +154,7 @@ void Controller::integratePoseToCurrentTime()
     const double &yaw_f = yaw + m_odom_at_pose.twist.twist.linear.z * dt;
     double x_f;
     double y_f;
-    if(std::isnan(radius_curvature))
+    if(std::isnan(radius_curvature) || std::isinf(radius_curvature))
     {
         x_f = m_pose->pose.position.x + (m_odom->twist.twist.linear.x * dt + acc_x * std::pow(dt, 2) / 2) * cos(yaw);
         y_f = m_pose->pose.position.y + (m_odom->twist.twist.linear.y * dt + acc_y * std::pow(dt, 2) / 2) * sin(yaw);
@@ -192,7 +192,7 @@ void Controller::integrateOdomToCurrentTime()
     const double &yaw_f = yaw + m_odom_at_pose.twist.twist.linear.z * dt;
     double x_f;
     double y_f;
-    if(std::isnan(radius_curvature))
+    if(std::isnan(radius_curvature) || std::isinf(radius_curvature))
     {
         x_f = m_odom->pose.pose.position.x + (m_odom->twist.twist.linear.x * dt + acc_x * std::pow(dt, 2) / 2) * cos(yaw);
         y_f = m_odom->pose.pose.position.y + (m_odom->twist.twist.linear.y * dt + acc_y * std::pow(dt, 2) / 2) * sin(yaw);

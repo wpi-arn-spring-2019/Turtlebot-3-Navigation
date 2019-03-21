@@ -346,7 +346,7 @@ void Localization::integrateOdomToScanTime()
     const double &yaw_f = yaw + m_odom_at_scan.twist.twist.linear.z * dt.toSec();
     double x_f;
     double y_f;
-    if(std::isnan(radius_curvature))
+    if(std::isnan(radius_curvature) || std::isinf(radius_curvature))
     {
         x_f = m_odom->pose.pose.position.x + (m_odom->twist.twist.linear.x * dt.toSec() + acc_x * std::pow(dt.toSec(), 2) / 2) * cos(yaw);
         y_f = m_odom->pose.pose.position.y + (m_odom->twist.twist.linear.y * dt.toSec() + acc_y * std::pow(dt.toSec(), 2) / 2) * sin(yaw);
