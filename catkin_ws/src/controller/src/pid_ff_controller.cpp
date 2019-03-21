@@ -3,9 +3,20 @@
 namespace Turtlebot
 {
 
+PIDFeedForwardController::PIDFeedForwardController()
+{
+    initializeController();
+}
+
 PIDFeedForwardController::~PIDFeedForwardController()
 {
     delete m_prev_state;
+}
+
+void PIDFeedForwardController::initializeController()
+{
+    m_integral_w = 0;
+    m_integral_v = 0;
 }
 
 const geometry_msgs::Twist PIDFeedForwardController::getControls(const TurtlebotState &current_state, const TurtlebotState &desired_state)
@@ -23,8 +34,8 @@ const geometry_msgs::Twist PIDFeedForwardController::getControls(const Turtlebot
     {
         derivative_w = 0;
     }
-    const double &integral_w = current_state.th - desired_state.th;
-    const double &control_w = desired_state.th_dot - m_kp_w * error_w - m_ki_w * integral_w - m_kd_w * derivative_w;
+    m_integral_w += error_w * dt;
+    const double &control_w = desired_state.th_dot - m_kp_w * error_w - m_ki_w * m_integral_w - m_kd_w * derivative_w;
     control.angular.z = control_w;
     const double &error_v = current_state.v - desired_state.v;
     double derivative_v = (current_state.v - m_prev_state->v) / dt;
@@ -32,8 +43,8 @@ const geometry_msgs::Twist PIDFeedForwardController::getControls(const Turtlebot
     {
         derivative_v = 0;
     }
-    const double &integral_v = current_state.th - desired_state.th;
-    const double &control_v = desired_state.th_dot - m_kp_v * error_v - m_ki_v * integral_v - m_kd_v * derivative_v;
+    m_integral_v += error_v * dt;
+    const double &control_v = desired_state.th_dot - m_kp_v * error_v - m_ki_v * m_integral_v - m_kd_v * derivative_v;
     control.linear.x = control_v;
     return control;
 }

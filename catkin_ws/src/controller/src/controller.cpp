@@ -46,7 +46,8 @@ void Controller::initializeController(ros::NodeHandle &pnh)
     {
         m_config.controller_type = 3;
         m_cont_type = controller_type::PID_FF;
-        m_pid_ff_cont = new PIDFeedForwardController();        
+        m_pid_ff_cont = new PIDFeedForwardController();
+        m_pid_ff_cont->initializeController();
         m_pid_ff_cont->setGains(m_kp_w, m_ki_w, m_kd_w, m_kp_v, m_ki_v, m_kd_v);
     }
     else if(std::string("pd").find(type) != std::string::npos)
@@ -124,13 +125,8 @@ const TurtlebotState Controller::getDesiredState() const
 
 const TurtlebotState Controller::integrateDesiredStateToCurrentTime(const int &traj_it, const double &dt) const
 {
-    double acc_ang = 0;
-    double acc_linear = 0;
-    if(traj_it >= 1)
-    {
-        acc_ang = m_traj->yaw_rates[traj_it] - m_traj->yaw_rates[traj_it - 1];
-        acc_linear = m_traj->speeds[traj_it] - m_traj->speeds[traj_it - 1];
-    }
+    const double &acc_ang = m_traj->yaw_rates[traj_it] - m_traj->yaw_rates[traj_it - 1];
+    const double &acc_linear = m_traj->speeds[traj_it] - m_traj->speeds[traj_it - 1];
     const double &th_dot = m_traj->yaw_rates[traj_it - 1] + acc_ang * dt;
     const double &th = m_traj->headings[traj_it - 1] + th_dot * dt + acc_ang * std::pow(dt, 2) / 2;
     const double &v = m_traj->speeds[traj_it] + acc_linear * dt;
@@ -152,9 +148,9 @@ void Controller::integratePoseToCurrentTime()
     tf::Quaternion q;
     tf::quaternionMsgToTF(m_odom->pose.pose.orientation, q);
     const double &yaw = tf::getYaw(q);
-    const double &radius_curvature = std::pow(m_odom_at_pose.twist.twist.linear.x, 2) +
-                                     std::pow(m_odom_at_pose.twist.twist.linear.y, 2) /
-                                     m_odom_at_pose.twist.twist.angular.z;
+    const double &radius_curvature = std::pow(std::pow(m_odom_at_pose.twist.twist.linear.x, 2) +
+                                              std::pow(m_odom_at_pose.twist.twist.linear.y, 2), 3 / 2) /
+                                              (m_odom_at_pose.twist.twist.linear.x * acc_y + m_odom_at_pose.twist.twist.linear.y * acc_x);
     const double &yaw_f = yaw + m_odom_at_pose.twist.twist.linear.z * dt;
     double x_f;
     double y_f;
@@ -190,9 +186,9 @@ void Controller::integrateOdomToCurrentTime()
     tf::Quaternion q;
     tf::quaternionMsgToTF(m_odom->pose.pose.orientation, q);
     const double &yaw = tf::getYaw(q);
-    const double &radius_curvature = std::pow(m_odom_at_pose.twist.twist.linear.x, 2) +
-                                     std::pow(m_odom_at_pose.twist.twist.linear.y, 2) /
-                                     m_odom_at_pose.twist.twist.angular.z;
+    const double &radius_curvature = std::pow(std::pow(m_odom_at_pose.twist.twist.linear.x, 2) +
+                                              std::pow(m_odom_at_pose.twist.twist.linear.y, 2), 3 / 2) /
+                                              (m_odom_at_pose.twist.twist.linear.x * acc_y + m_odom_at_pose.twist.twist.linear.y * acc_x);
     const double &yaw_f = yaw + m_odom_at_pose.twist.twist.linear.z * dt;
     double x_f;
     double y_f;
@@ -241,6 +237,7 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
         {
             m_cont_type = Controller::PID_FF;
             m_pid_ff_cont = new PIDFeedForwardController;
+            m_pid_ff_cont->initializeController();
         }
     }
     m_kp_w = config.kp_w;

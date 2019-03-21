@@ -340,9 +340,9 @@ void Localization::integrateOdomToScanTime()
     tf::Quaternion q;
     tf::quaternionMsgToTF(m_odom->pose.pose.orientation, q);
     const double &yaw = tf::getYaw(q);
-    const double &radius_curvature = std::pow(m_odom_at_scan.twist.twist.linear.x, 2) +
-                                     std::pow(m_odom_at_scan.twist.twist.linear.y, 2) /
-                                     m_odom_at_scan.twist.twist.angular.z;
+    const double &radius_curvature = std::pow(std::pow(m_odom_at_scan.twist.twist.linear.x, 2) +
+                                              std::pow(m_odom_at_scan.twist.twist.linear.y, 2), 3 / 2) /
+                                              (m_odom_at_scan.twist.twist.linear.x * acc_y + m_odom_at_scan.twist.twist.linear.y * acc_x);
     const double &yaw_f = yaw + m_odom_at_scan.twist.twist.linear.z * dt.toSec();
     double x_f;
     double y_f;
