@@ -1,8 +1,13 @@
-controller_type: "pid_ff"
+#PD: 0
+#PID: 1
+#PD_FF: 2
+#PID_FF: 3
 
-kp_w: 1
-ki_w: 1
-kd_w: 1
-kp_v: 1
-ki_v: 1
-kd_v: 1
+controller_type: 3
+
+kp_w: 30
+ki_w: 0.01
+kd_w: 10
+kp_v: 0
+ki_v: 0.0
+kd_v: 0.0

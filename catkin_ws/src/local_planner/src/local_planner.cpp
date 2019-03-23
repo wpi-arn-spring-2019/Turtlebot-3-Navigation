@@ -402,7 +402,7 @@ void LocalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
 {
     turtlebot_msgs::Trajectory trajectory;
     nav_msgs::Path path;
-    trajectory.header.stamp = m_goal_pose->header.stamp;
+    trajectory.header.stamp = ros::Time::now();
     path.header.stamp = m_goal_pose->header.stamp;
     trajectory.max_accel = m_goal_pose->max_accel;
     trajectory.max_speed = m_goal_pose->max_speed;
@@ -417,7 +417,7 @@ void LocalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
         if(traj_it < traj.size() - 1)
         {
             const double &next_heading = traj[traj_it + 1].heading;
-            yaw_rate = (next_heading - heading) / m_time_step_ms;
+            yaw_rate = (next_heading - heading) / (m_time_step_ms / 1000);
         }
         else
         {
@@ -425,16 +425,16 @@ void LocalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
         }
         const double &velocity = traj[traj_it].velocity;
         trajectory.x_values.push_back(x);
-        trajectory.y_values.push_back(x);
+        trajectory.y_values.push_back(y);
         trajectory.speeds.push_back(velocity);
         trajectory.headings.push_back(heading);
         trajectory.yaw_rates.push_back(yaw_rate);
-        trajectory.durations.push_back(m_time_step_ms);
+        trajectory.durations.push_back(m_time_step_ms / 1000);
         geometry_msgs::PoseStamped pose;
         pose.pose.position.x = x;
         pose.pose.position.y = y;
         path.poses.push_back(pose);
-        time_from_start += m_time_step_ms;
+        time_from_start += m_time_step_ms / 1000;
     }
     m_trajectory_pub.publish(trajectory);
     m_path_pub.publish(path);

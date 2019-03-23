@@ -340,22 +340,9 @@ void Localization::integrateOdomToScanTime()
     tf::Quaternion q;
     tf::quaternionMsgToTF(m_odom->pose.pose.orientation, q);
     const double &yaw = tf::getYaw(q);
-    const double &radius_curvature = std::pow(std::pow(m_odom_at_scan.twist.twist.linear.x, 2) +
-                                              std::pow(m_odom_at_scan.twist.twist.linear.y, 2), 3 / 2) /
-                                              (m_odom_at_scan.twist.twist.linear.x * acc_y + m_odom_at_scan.twist.twist.linear.y * acc_x);
     const double &yaw_f = yaw + m_odom_at_scan.twist.twist.linear.z * dt.toSec();
-    double x_f;
-    double y_f;
-    if(std::isnan(radius_curvature) || std::isinf(radius_curvature))
-    {
-        x_f = m_odom->pose.pose.position.x + (m_odom->twist.twist.linear.x * dt.toSec() + acc_x * std::pow(dt.toSec(), 2) / 2) * cos(yaw);
-        y_f = m_odom->pose.pose.position.y + (m_odom->twist.twist.linear.y * dt.toSec() + acc_y * std::pow(dt.toSec(), 2) / 2) * sin(yaw);
-    }
-    else
-    {
-        x_f = m_odom->pose.pose.position.x + radius_curvature * cos(yaw_f) * cos(yaw);
-        y_f = m_odom->pose.pose.position.y + radius_curvature * sin(yaw_f) * sin(yaw);
-    }
+    const double &x_f = m_odom->pose.pose.position.x + (m_odom->twist.twist.linear.x * dt.toSec() + acc_x * std::pow(dt.toSec(), 2) / 2) * cos(yaw);
+    const double &y_f = m_odom->pose.pose.position.y + (m_odom->twist.twist.linear.y * dt.toSec() + acc_y * std::pow(dt.toSec(), 2) / 2) * sin(yaw);
     tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
     q_f.normalize();
     m_odom_at_scan.pose.pose.position.x = x_f;

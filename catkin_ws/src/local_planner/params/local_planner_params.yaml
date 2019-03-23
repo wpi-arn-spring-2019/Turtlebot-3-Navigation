@@ -7,7 +7,7 @@ spline_order: 3
 goal_pos_tolerance: 0.1
 goal_heading_tolerance: 0.1
 goal_speed_tolerance: 0.025
-timeout_ms: 5000
+timeout_ms: 10000
 
 turtlebot_radius: 0.21
 angular_col_res: 0.1

@@ -293,7 +293,7 @@ void ExtendedKalmanFilter::imuCallback(const sensor_msgs::Imu::ConstPtr &msg)
     if(!m_have_imu)
     {
         m_have_imu = true;
-        m_prev_imu = msg;
+        m_imu = msg;
     }
     m_prev_imu = m_imu;
     m_imu = msg;
