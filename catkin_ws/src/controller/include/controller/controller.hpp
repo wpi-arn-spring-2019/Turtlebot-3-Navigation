@@ -71,6 +71,10 @@ private:
     std::vector<double> m_ki_gains_v;
     std::vector<double> m_kd_gains_v;
 
+
+    PDController *m_pd_cont;
+    PIDController *m_pid_cont;
+    PDFeedForwardController *m_pd_ff_cont;
     PIDFeedForwardController *m_pid_ff_cont;
 
 

@@ -24,6 +24,9 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 Controller::~Controller()
 {
     delete m_server;
+    delete m_pd_cont;
+    delete m_pid_cont;
+    delete m_pd_cont;
     delete m_pid_ff_cont;
 }
 
@@ -35,15 +38,46 @@ void Controller::initializeController(ros::NodeHandle &pnh)
     pnh.getParam("controller_type", type);
     if(type == 0)
     {
-
+        m_config.controller_type = type;
+        m_config.kp_w = m_kp_gains_w[0];
+        m_config.ki_w = 0;
+        m_config.kd_w = m_kd_gains_w[0];
+        m_config.kp_v = m_kp_gains_v[0];
+        m_config.ki_v = 0;
+        m_config.kd_v = m_kd_gains_v[0];
+        m_cont_type = controller_type::PD;
+        m_pd_cont = new PDController();
+        m_pd_cont->setGains(m_kp_gains_w[0], m_kd_gains_w[0],
+                            m_kp_gains_v[0], m_kd_gains_v[0]);
     }
     else if(type == 1)
-    {
-
+    {      
+        m_config.controller_type = type;
+        m_config.kp_w = m_kp_gains_w[1];
+        m_config.ki_w = m_ki_gains_w[1];
+        m_config.kd_w = m_kd_gains_w[1];
+        m_config.kp_v = m_kp_gains_v[1];
+        m_config.ki_v = m_ki_gains_v[1];
+        m_config.kd_v = m_kd_gains_v[1];
+        m_cont_type = controller_type::PID;
+        m_pid_cont = new PIDController();
+        m_pid_cont->initializeController();
+        m_pid_cont->setGains(m_kp_gains_w[1], m_ki_gains_w[1], m_kd_gains_w[1],
+                             m_kp_gains_v[1], m_ki_gains_v[1], m_kd_gains_v[1]);
     }
     else if(type == 2)
     {
-
+        m_config.controller_type = type;
+        m_config.kp_w = m_kp_gains_w[2];
+        m_config.ki_w = 0;
+        m_config.kd_w = m_kd_gains_w[2];
+        m_config.kp_v = m_kp_gains_v[2];
+        m_config.ki_v = 0;
+        m_config.kd_v = m_kd_gains_v[2];
+        m_cont_type = controller_type::PID_FF;
+        m_pd_ff_cont = new PDFeedForwardController();
+        m_pd_ff_cont->setGains(m_kp_gains_w[2], m_kd_gains_w[2],
+                               m_kp_gains_v[2], m_kd_gains_v[2]);
     }
     else if(type == 3)
     {
@@ -101,19 +135,17 @@ void Controller::control()
         switch(m_cont_type)
         {
         case PD:
-
+            pubControls(m_pd_cont->getControls(getCurrentState(), getDesiredState()));
             break;
         case PID:
-
+            pubControls(m_pid_cont->getControls(getCurrentState(), getDesiredState()));
             break;
         case PD_FF:
-
+            pubControls(m_pd_ff_cont->getControls(getCurrentState(), getDesiredState()));
             break;
 
         case PID_FF:
-            const TurtlebotState &current_state = getCurrentState();
-            const TurtlebotState &desired_state = getDesiredState();
-            pubControls(m_pid_ff_cont->getControls(current_state, desired_state));
+            pubControls(m_pid_ff_cont->getControls(getCurrentState(), getDesiredState()));
             break;
         }        
     }
@@ -259,14 +291,42 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
         if(type == 0)
         {
             m_cont_type = Controller::PD;
+            m_pd_cont = new PDController;
+            m_pd_cont->setGains(m_kp_gains_w[0], m_kd_gains_w[0],
+                                m_kp_gains_v[0], m_kd_gains_v[0]);
+            config.kp_w = m_kp_gains_w[0];
+            config.ki_w = 0;
+            config.kd_w = m_kd_gains_w[0];
+            config.kp_v = m_kp_gains_v[0];
+            config.ki_v = 0;
+            config.kd_v = m_kd_gains_v[0];
         }
         if(type == 1)
         {
             m_cont_type = Controller::PID;
+            m_pid_cont = new PIDController;
+            m_pid_cont->initializeController();
+            m_pid_cont->setGains(m_kp_gains_w[1], m_ki_gains_w[1], m_kd_gains_w[1],
+                                 m_kp_gains_v[1], m_ki_gains_v[1], m_kd_gains_v[1]);
+            config.kp_w = m_kp_gains_w[1];
+            config.ki_w = m_ki_gains_w[1];
+            config.kd_w = m_kd_gains_w[1];
+            config.kp_v = m_kp_gains_v[1];
+            config.ki_v = m_ki_gains_v[1];
+            config.kd_v = m_kd_gains_v[1];
         }
         if(type == 2)
         {
             m_cont_type = Controller::PD_FF;
+            m_pd_ff_cont = new PDFeedForwardController;
+            m_pd_ff_cont->setGains(m_kp_gains_w[2], m_kd_gains_w[2],
+                                   m_kp_gains_v[2], m_kd_gains_v[2]);
+            config.kp_w = m_kp_gains_w[2];
+            config.ki_w = 0;
+            config.kd_w = m_kd_gains_w[2];
+            config.kp_v = m_kp_gains_v[2];
+            config.ki_v = 0;
+            config.kd_v = m_kd_gains_v[2];
         }
         if(type == 3)
         {
@@ -275,12 +335,12 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             m_pid_ff_cont->initializeController();
             m_pid_ff_cont->setGains(m_kp_gains_w[3], m_ki_gains_w[3], m_kd_gains_w[3],
                                     m_kp_gains_v[3], m_ki_gains_v[3], m_kd_gains_v[3]);
-            m_kp_gains_w[3] = config.kp_w;
-            m_ki_gains_w[3] = config.ki_w;
-            m_kd_gains_w[3] = config.kd_w;
-            m_kp_gains_v[3] = config.kp_v;
-            m_ki_gains_v[3] = config.ki_v;
-            m_kd_gains_v[3] = config.kd_v;
+            config.kp_w = m_kp_gains_w[3];
+            config.ki_w = m_ki_gains_w[3];
+            config.kd_w = m_kd_gains_w[3];
+            config.kp_v = m_kp_gains_v[3];
+            config.ki_v = m_ki_gains_v[3];
+            config.kd_v = m_kd_gains_v[3];
         }
     }
 }
