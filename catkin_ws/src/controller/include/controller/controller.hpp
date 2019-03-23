@@ -34,6 +34,7 @@ private:
     void updateDynamicReconfigure();
 
     void initializeController(ros::NodeHandle &pnh);
+    void getGains(ros::NodeHandle &pnh);
     const TurtlebotState getCurrentState();
     const TurtlebotState getDesiredState() const;
     const TurtlebotState integrateDesiredStateToCurrentTime(const int &traj_it, const double &dt) const;
@@ -60,15 +61,15 @@ private:
     nav_msgs::Odometry m_odom_at_pose;
     nav_msgs::Odometry m_odom_at_control;
 
-    enum controller_type{PD = 1, PID = 2, PD_FF = 3, PID_FF = 4};
+    enum controller_type{PD = 1, PID = 2, PD_FF = 3, PID_FF = 4, DF_LINEARIZATION = 5};
     controller_type m_cont_type;
-    double m_kp_w;
-    double m_ki_w;
-    double m_kd_w;
-    double m_kp_v;
-    double m_ki_v;
-    double m_kd_v;
 
+    std::vector<double> m_kp_gains_w;
+    std::vector<double> m_ki_gains_w;
+    std::vector<double> m_kd_gains_w;
+    std::vector<double> m_kp_gains_v;
+    std::vector<double> m_ki_gains_v;
+    std::vector<double> m_kd_gains_v;
 
     PIDFeedForwardController *m_pid_ff_cont;
 

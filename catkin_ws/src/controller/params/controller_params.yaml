@@ -5,9 +5,26 @@
 
 controller_type: 3
 
-kp_w: 1
-ki_w: 0.001
-kd_w: 0.2
-kp_v: 1
-ki_v: 0.0001
-kd_v: 0.1
+kp_w_pd: 1
+kd_w_pd: 0.2
+kp_v_pd: 1
+kd_v_pd: 0.1
+
+kp_w_pid: 1
+ki_w_pid: 0.001
+kd_w_pid: 0.2
+kp_v_pid: 1
+ki_v_pid: 0.0001
+kd_v_pid: 0.1
+
+kp_w_pd_ff: 1
+kd_w_pd_ff: 0.2
+kp_v_pd_ff: 1
+kd_v_pd_ff: 0.1
+
+kp_w_pid_ff: 1
+ki_w_pid_ff: 0.001
+kd_w_pid_ff: 0.2
+kp_v_pid_ff: 1
+ki_v_pid_ff: 0.0001
+kd_v_pid_ff: 0.1

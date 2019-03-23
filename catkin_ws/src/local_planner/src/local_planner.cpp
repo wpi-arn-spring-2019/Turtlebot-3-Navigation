@@ -7,6 +7,7 @@ LocalPlanner::LocalPlanner(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {
     m_costmap_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 10, &LocalPlanner::costmapCallback, this);
     m_goal_pose_sub = nh.subscribe<turtlebot_msgs::GoalPose>("/goal_pose", 10, &LocalPlanner::goalPoseCallback, this);
+    m_rviz_goal_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/move_base_simple/goal", 10, &LocalPlanner::rvizGoalPoseCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/pf_pose", 10, &LocalPlanner::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &LocalPlanner::odomCallback, this);
     m_trajectory_pub = nh.advertise<turtlebot_msgs::Trajectory>("/trajectory", 10);
@@ -138,13 +139,13 @@ void LocalPlanner::closeNode(const GraphNode &node)
 const bool LocalPlanner::checkForGoal(const GraphNode &node)
 {
     const double &time_step = m_time_step_ms / 1000;
-    const double &dist_to_goal = calcDistanceBetween(node.child_point, Point<double>(m_goal_pose->x, m_goal_pose->y));
+    const double &dist_to_goal = calcDistanceBetween(node.child_point, Point<double>(m_goal_pose.x, m_goal_pose.y));
     const double &max_travel_dist = node.velocity * time_step + m_goal_pos_tolerance;
-    const double &heading_diff = fabs(m_goal_pose->heading - node.heading);
-    const double &velocity_diff = fabs(m_goal_pose->speed - node.velocity);
+    const double &heading_diff = fabs(m_goal_pose.heading - node.heading);
+    const double &velocity_diff = fabs(m_goal_pose.speed - node.velocity);
     if((dist_to_goal > max_travel_dist + m_goal_pos_tolerance) ||
        (heading_diff > m_max_yaw_rate * time_step + m_goal_heading_tolerance) ||
-       (velocity_diff > m_goal_pose->max_accel * time_step + m_goal_speed_tolerance))
+       (velocity_diff > m_goal_pose.max_accel * time_step + m_goal_speed_tolerance))
     {        
         return false;
     }
@@ -207,8 +208,8 @@ const std::vector<double> LocalPlanner::calcPossibleVelocities(const GraphNode &
 {
     std::vector<double> possible_velocities = {};
     const double &current_velocity = current_node.velocity;
-    const double &max_accel = m_goal_pose->max_accel;
-    const double &max_velocity  = m_goal_pose->max_speed;
+    const double &max_accel = m_goal_pose.max_accel;
+    const double &max_velocity  = m_goal_pose.max_speed;
     const double &time_step = m_time_step_ms / 1000;
     const double &max_possible_vel = current_velocity + max_accel * time_step;
     const double &min_possible_vel = current_velocity - max_accel * time_step;
@@ -217,7 +218,7 @@ const std::vector<double> LocalPlanner::calcPossibleVelocities(const GraphNode &
     for(int i = 0; i < num_possible_vels; i++)
     {
         const double &velocity = min_possible_vel + i * m_velocity_res;
-        if(velocity == 0 && m_goal_pose->speed != 0)
+        if(velocity == 0 && m_goal_pose.speed != 0)
         {
             continue;
         }
@@ -262,18 +263,18 @@ const double LocalPlanner::calcG(const Point<double> &pt, const GraphNode &paren
 
 const double LocalPlanner::calcH(const Point<double> &pt, const Point<double> &cur_pt, const double &heading, const double &velocity, const Spline1d &spline)
 {
-    const double &goal_x = m_goal_pose->x;
-    const double &goal_y = m_goal_pose->y;
+    const double &goal_x = m_goal_pose.x;
+    const double &goal_y = m_goal_pose.y;
     const double &max_dist = sqrt(pow(goal_x, 2) + pow(goal_y, 2));
-    const double &dist_to_goal = calcDistanceBetween(pt, Point<double>(m_goal_pose->x, m_goal_pose->y));
+    const double &dist_to_goal = calcDistanceBetween(pt, Point<double>(m_goal_pose.x, m_goal_pose.y));
     const double &dist_heuristic = dist_to_goal / max_dist * 100;
     const double &target_heading = calcTargetHeading(cur_pt, velocity, spline);
     const double &heading_diff = fabs(target_heading - heading);
     double heading_heuristic = heading_diff / M_PI * 250;
-    double velocity_heuristic = 100 - velocity / m_goal_pose->max_speed * 100;
+    double velocity_heuristic = 100 - velocity / m_goal_pose.max_speed * 100;
     if(checkVelH(pt, heading, velocity))
     {
-        velocity_heuristic = fabs(velocity - m_goal_pose->speed) / (m_goal_pose->speed - m_goal_pose->max_speed) * 100;
+        velocity_heuristic = fabs(velocity - m_goal_pose.speed) / (m_goal_pose.speed - m_goal_pose.max_speed) * 100;
     }
     return fabs(dist_heuristic + heading_heuristic + velocity_heuristic);
 }
@@ -284,10 +285,10 @@ const Spline1d LocalPlanner::calcSpline(const Point<double> &pt, const double &h
     const double &start_y = pt.y;
     const double &start_x_ = start_x + 0.001 * cos(heading);
     const double &start_y_ = start_y + 0.001 * sin(heading);
-    const double &end_x = m_goal_pose->x;
-    const double &end_y = m_goal_pose->y;
-    const double &end_x_ = end_x - 0.001 * cos(m_goal_pose->heading);
-    const double &end_y_ = end_y - 0.001 * sin(m_goal_pose->heading);
+    const double &end_x = m_goal_pose.x;
+    const double &end_y = m_goal_pose.y;
+    const double &end_x_ = end_x - 0.001 * cos(m_goal_pose.heading);
+    const double &end_y_ = end_y - 0.001 * sin(m_goal_pose.heading);
     Eigen::MatrixXd points(2, 4);
     points << start_x, start_x_, end_x_, end_x,
               start_y, start_y_, end_y_, end_y;
@@ -320,21 +321,21 @@ const double LocalPlanner::calcTargetHeading(const Point<double> &pt, const doub
 
 const bool LocalPlanner::checkVelH(const Point<double> &pt, const double &heading, const double &velocity)
 {
-    double next_vel = velocity + m_goal_pose->max_accel * m_time_step_ms / 1000;
-    if(next_vel > m_goal_pose->max_speed)
+    double next_vel = velocity + m_goal_pose.max_accel * m_time_step_ms / 1000;
+    if(next_vel > m_goal_pose.max_speed)
     {
-        next_vel = m_goal_pose->max_speed;
+        next_vel = m_goal_pose.max_speed;
     }
     const double &average_vel = (next_vel + velocity) / 2;
     const double &x = pt.x + average_vel * m_time_step_ms / 1000 * cos(heading);
     const double &y = pt.y + average_vel * m_time_step_ms / 1000 * sin(heading);
-    const double &dx = x - m_goal_pose->x;
-    const double &dy = y - m_goal_pose->y;
+    const double &dx = x - m_goal_pose.x;
+    const double &dy = y - m_goal_pose.y;
     const double &dist_to_goal = sqrt(pow(dx, 2) + pow(dy, 2));
     const double &speed = velocity;
-    const double &max_accel = m_goal_pose->max_accel;
-    const double &time_to_decel = (speed - m_goal_pose->speed) / max_accel;
-    const double &dist_to_decel = speed * time_to_decel - m_goal_pose->max_accel * pow(time_to_decel, 2) / 2;
+    const double &max_accel = m_goal_pose.max_accel;
+    const double &time_to_decel = (speed - m_goal_pose.speed) / max_accel;
+    const double &dist_to_decel = speed * time_to_decel - m_goal_pose.max_accel * pow(time_to_decel, 2) / 2;
     return (dist_to_goal <= dist_to_decel);
 }
 
@@ -403,9 +404,9 @@ void LocalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
     turtlebot_msgs::Trajectory trajectory;
     nav_msgs::Path path;
     trajectory.header.stamp = ros::Time::now();
-    path.header.stamp = m_goal_pose->header.stamp;
-    trajectory.max_accel = m_goal_pose->max_accel;
-    trajectory.max_speed = m_goal_pose->max_speed;
+    path.header.stamp = m_goal_pose.header.stamp;
+    trajectory.max_accel = m_goal_pose.max_accel;
+    trajectory.max_speed = m_goal_pose.max_speed;
     path.header.frame_id = "/map";
     double time_from_start = 0;
     for(int traj_it = 0; traj_it < traj.size(); traj_it++)
@@ -457,7 +458,24 @@ void LocalPlanner::goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &ms
     if(m_have_costmap && m_have_pose && m_have_odom)
     {
         have_goal = true;
-        m_goal_pose = msg;
+        m_goal_pose = *msg;
+        planPath();
+    }
+}
+
+void LocalPlanner::rvizGoalPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
+{
+    if(m_have_costmap && m_have_pose && m_have_odom)
+    {
+        have_goal = true;
+        tf::Quaternion q;
+        tf::quaternionMsgToTF(msg->pose.orientation, q);
+        m_goal_pose.heading = tf::getYaw(q);
+        m_goal_pose.x = msg->pose.position.x;
+        m_goal_pose.y = msg->pose.position.y;
+        m_goal_pose.speed = 0;
+        m_goal_pose.max_speed = 0.2;
+        m_goal_pose.max_accel = 0.2;
         planPath();
     }
 }

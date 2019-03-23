@@ -11,6 +11,12 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
     m_call_type = boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2);
     m_server = new dynamic_reconfigure::Server<controller::ControllerConfig>(m_config_mutex);
+    m_kp_gains_w.resize(5);
+    m_ki_gains_w.resize(5);
+    m_kd_gains_w.resize(5);
+    m_kp_gains_v.resize(5);
+    m_ki_gains_v.resize(5);
+    m_kd_gains_v.resize(5);
     m_server->setCallback(m_call_type);
     initializeController(pnh);
 }
@@ -22,20 +28,9 @@ Controller::~Controller()
 }
 
 void Controller::initializeController(ros::NodeHandle &pnh)
-{
+{   
     m_server->getConfigDefault(m_config);
-    pnh.getParam("kp_w", m_kp_w);
-    pnh.getParam("ki_w", m_ki_w);
-    pnh.getParam("kd_w", m_kd_w);
-    pnh.getParam("kp_v", m_kp_v);
-    pnh.getParam("ki_v", m_ki_v);
-    pnh.getParam("kd_v", m_kd_v);
-    m_config.kp_w = m_kp_w;
-    m_config.ki_w = m_ki_w;
-    m_config.kd_w = m_kd_w;
-    m_config.kp_v = m_kp_v;
-    m_config.ki_v = m_ki_v;
-    m_config.kd_v = m_kd_v;
+    getGains(pnh);
     int type;
     pnh.getParam("controller_type", type);
     if(type == 0)
@@ -53,10 +48,17 @@ void Controller::initializeController(ros::NodeHandle &pnh)
     else if(type == 3)
     {
         m_config.controller_type = type;
+        m_config.kp_w = m_kp_gains_w[3];
+        m_config.ki_w = m_ki_gains_w[3];
+        m_config.kd_w = m_kd_gains_w[3];
+        m_config.kp_v = m_kp_gains_v[3];
+        m_config.ki_v = m_ki_gains_v[3];
+        m_config.kd_v = m_kd_gains_v[3];
         m_cont_type = controller_type::PID_FF;
         m_pid_ff_cont = new PIDFeedForwardController();
         m_pid_ff_cont->initializeController();
-        m_pid_ff_cont->setGains(m_kp_w, m_ki_w, m_kd_w, m_kp_v, m_ki_v, m_kd_v);
+        m_pid_ff_cont->setGains(m_kp_gains_w[3], m_ki_gains_w[3], m_kd_gains_w[3],
+                                m_kp_gains_v[3], m_ki_gains_v[3], m_kd_gains_v[3]);
     }
     else
     {
@@ -65,6 +67,30 @@ void Controller::initializeController(ros::NodeHandle &pnh)
     boost::recursive_mutex::scoped_lock lock(m_config_mutex);
     m_server->updateConfig(m_config);
     lock.unlock();
+}
+
+void Controller::getGains(ros::NodeHandle &pnh)
+{
+    pnh.getParam("kp_w_pd", m_kp_gains_w[0]);
+    pnh.getParam("kd_w_pd", m_kd_gains_w[0]);
+    pnh.getParam("kp_v_pd", m_kp_gains_v[0]);
+    pnh.getParam("kd_v_pd", m_kd_gains_v[0]);
+    pnh.getParam("kp_w_pid", m_kp_gains_w[1]);
+    pnh.getParam("ki_w_pid", m_ki_gains_w[1]);
+    pnh.getParam("kd_w_pid", m_kd_gains_w[1]);
+    pnh.getParam("kp_v_pid", m_kp_gains_v[1]);
+    pnh.getParam("ki_v_pid", m_ki_gains_v[1]);
+    pnh.getParam("kd_v_pid", m_kd_gains_v[1]);
+    pnh.getParam("kp_w_pd_ff", m_kp_gains_w[2]);
+    pnh.getParam("kd_w_pd_ff", m_kd_gains_w[2]);
+    pnh.getParam("kp_v_pd_ff", m_kp_gains_v[2]);
+    pnh.getParam("kd_v_pd_ff", m_kd_gains_v[2]);
+    pnh.getParam("kp_w_pid_ff", m_kp_gains_w[3]);
+    pnh.getParam("ki_w_pid_ff", m_ki_gains_w[3]);
+    pnh.getParam("kd_w_pid_ff", m_kd_gains_w[3]);
+    pnh.getParam("kp_v_pid_ff", m_kp_gains_v[3]);
+    pnh.getParam("ki_v_pid_ff", m_ki_gains_v[3]);
+    pnh.getParam("kd_v_pid_ff", m_kd_gains_v[3]);
 }
 
 void Controller::control()
@@ -87,7 +113,6 @@ void Controller::control()
         case PID_FF:
             const TurtlebotState &current_state = getCurrentState();
             const TurtlebotState &desired_state = getDesiredState();
-            //ROS_INFO_STREAM(current_state.th_dot << " " << desired_state.th_dot);
             pubControls(m_pid_ff_cont->getControls(current_state, desired_state));
             break;
         }        
@@ -95,7 +120,7 @@ void Controller::control()
 }
 
 const TurtlebotState Controller::getCurrentState()
-{        
+{
     integrateOdomToCurrentTime();
     integratePoseToCurrentTime();
     const double &x = m_pose_at_control.position.x;
@@ -248,15 +273,16 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             m_cont_type = Controller::PID_FF;
             m_pid_ff_cont = new PIDFeedForwardController;
             m_pid_ff_cont->initializeController();
-            m_pid_ff_cont->setGains(m_kp_w, m_ki_w, m_kd_w, m_kp_v, m_ki_v, m_kd_v);
+            m_pid_ff_cont->setGains(m_kp_gains_w[3], m_ki_gains_w[3], m_kd_gains_w[3],
+                                    m_kp_gains_v[3], m_ki_gains_v[3], m_kd_gains_v[3]);
+            m_kp_gains_w[3] = config.kp_w;
+            m_ki_gains_w[3] = config.ki_w;
+            m_kd_gains_w[3] = config.kd_w;
+            m_kp_gains_v[3] = config.kp_v;
+            m_ki_gains_v[3] = config.ki_v;
+            m_kd_gains_v[3] = config.kd_v;
         }
     }
-    m_kp_w = config.kp_w;
-    m_ki_w = config.ki_w;
-    m_kd_w = config.kd_w;
-    m_kp_v = config.kp_v;
-    m_ki_v = config.ki_v;
-    m_kd_v = config.kd_v;
 }
 
 void Controller::trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &msg)

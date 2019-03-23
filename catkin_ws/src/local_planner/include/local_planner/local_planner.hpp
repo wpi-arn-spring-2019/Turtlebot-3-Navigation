@@ -39,6 +39,7 @@ private:
     //callbacks
     void costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
     void goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &msg);
+    void rvizGoalPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
 
@@ -85,6 +86,7 @@ private:
     //pubsub
     ros::Subscriber m_costmap_sub;
     ros::Subscriber m_goal_pose_sub;
+    ros::Subscriber m_rviz_goal_pose_sub;
     ros::Subscriber m_pose_sub;
     ros::Subscriber m_odom_sub;
     ros::Publisher m_path_pub;
@@ -127,7 +129,7 @@ private:
 
     //callback refs
     nav_msgs::OccupancyGrid::ConstPtr m_local_costmap;
-    turtlebot_msgs::GoalPose::ConstPtr m_goal_pose;
+    turtlebot_msgs::GoalPose m_goal_pose;
     nav_msgs::OccupancyGrid::ConstPtr m_map;
     geometry_msgs::Twist m_turtlebot_velocity;
     geometry_msgs::PoseStamped::ConstPtr m_pose;
