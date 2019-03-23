@@ -456,6 +456,7 @@ void LocalPlanner::goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &ms
 {
     if(m_have_costmap && m_have_pose && m_have_odom)
     {
+        have_goal = true;
         m_goal_pose = msg;
         planPath();
     }

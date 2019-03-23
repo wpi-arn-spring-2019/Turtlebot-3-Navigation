@@ -32,6 +32,9 @@ public:
     LocalPlanner(ros::NodeHandle &nh, ros::NodeHandle &pnh);
     ~LocalPlanner();
 
+    void planPath();
+    bool have_goal = false;
+
 private:
     //callbacks
     void costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
@@ -45,8 +48,7 @@ private:
 
     //methods
 
-    //expansion
-    void planPath();
+    //expansion    
     void initializePlanner();
     void clearFrontier();
     void openNode(const GraphNode &node);
@@ -130,7 +132,7 @@ private:
     geometry_msgs::Twist m_turtlebot_velocity;
     geometry_msgs::PoseStamped::ConstPtr m_pose;
 
-    //flags
+    //flags    
     bool m_have_costmap = false;
     bool m_have_pose = false;
     bool m_have_odom = false;
