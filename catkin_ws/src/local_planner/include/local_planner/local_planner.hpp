@@ -123,6 +123,7 @@ private:
     double m_goal_heading_tolerance;
     double m_goal_speed_tolerance;
     double m_timeout_ms;
+    int m_num_retries;
     double m_radius;
     double m_angular_col_res;
     double m_radial_col_res;
@@ -138,6 +139,7 @@ private:
     bool m_have_costmap = false;
     bool m_have_pose = false;
     bool m_have_odom = false;
+    int m_retry_it = 0;
 };
 
 }

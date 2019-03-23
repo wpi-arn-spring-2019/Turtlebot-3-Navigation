@@ -30,6 +30,7 @@ void LocalPlanner::getParams(ros::NodeHandle &pnh)
       pnh.getParam("goal_heading_tolerance", m_goal_heading_tolerance);
       pnh.getParam("goal_speed_tolerance", m_goal_speed_tolerance);
       pnh.getParam("timeout_ms", m_timeout_ms);
+      pnh.getParam("num_retries", m_num_retries);
       pnh.getParam("turtlebot_radius", m_radius);
       pnh.getParam("angular_col_res", m_angular_col_res);
       pnh.getParam("radial_col_res", m_radial_col_res);
@@ -55,7 +56,7 @@ void LocalPlanner::setupCollision()
 }
 
 void LocalPlanner::planPath()
-{
+{    
     initializePlanner();
     const ros::Time &start_time = ros::Time::now();
     ros::Duration duration;
@@ -63,19 +64,36 @@ void LocalPlanner::planPath()
     {
         duration = ros::Time::now() - start_time;
         if(duration.toSec() * 1000 > m_timeout_ms)
-        {
-            ROS_ERROR_STREAM("Path plan time exceeded, attempting to replan");
+        {            
+            m_retry_it++;
+            if(m_retry_it > m_num_retries - 1)
+            {
+                ROS_WARN_STREAM("Failed to Find Path After " << m_num_retries << " Attempts. Resetting");
+                m_retry_it = 0;
+            }
             return;
         }
         GraphNode current_node = m_frontier.top();
         while(checkForCollision(calcNodeTransform(current_node.child_point, current_node.heading)))
         {
+            duration = ros::Time::now() - start_time;
+            if(duration.toSec() * 1000 > m_timeout_ms)
+            {
+                m_retry_it++;
+                if(m_retry_it > m_num_retries - 1)
+                {
+                    ROS_WARN_STREAM("Failed to Find Path After " << m_num_retries << " Attempts. Resetting");
+                    m_retry_it = 0;
+                }
+                return;
+            }
             m_frontier.pop();
             closeNode(current_node);
             current_node = m_frontier.top();
         }
         if(checkForGoal(current_node))
         {
+            m_retry_it = 0;
             reconstructTrajectory();
             break;
         }
@@ -473,8 +491,8 @@ void LocalPlanner::rvizGoalPoseCallback(const geometry_msgs::PoseStamped::ConstP
         m_goal_pose.heading = tf::getYaw(q);
         m_goal_pose.x = msg->pose.position.x;
         m_goal_pose.y = msg->pose.position.y;
-        m_goal_pose.speed = 0;
-        m_goal_pose.max_speed = 0.2;
+        m_goal_pose.speed = 0.0;
+        m_goal_pose.max_speed = 0.1;
         m_goal_pose.max_accel = 0.2;
         planPath();
     }

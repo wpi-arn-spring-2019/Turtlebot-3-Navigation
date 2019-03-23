@@ -46,7 +46,7 @@ const geometry_msgs::Twist PIDFeedForwardController::getControls(const Turtlebot
         derivative_v = 0;
     }
     m_integral_v += error_v * dt;
-    const double &control_v =  - m_kp_v * error_v - m_ki_v * m_integral_v - m_kd_v * derivative_v;
+    const double &control_v = desired_state.v - m_kp_v * error_v - m_ki_v * m_integral_v - m_kd_v * derivative_v;
     control.linear.x = control_v;
     m_prev_time = current_time;
     m_prev_state = new TurtlebotState(current_state);

@@ -31,8 +31,6 @@ private:
     double m_integral_v;
     bool m_first_it = true;
 
-
-
 };
 
 }
