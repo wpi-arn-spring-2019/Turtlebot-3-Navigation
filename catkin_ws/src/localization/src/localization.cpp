@@ -10,7 +10,7 @@ Localization::Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_map_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, &Localization::mapCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1, &Localization::poseCallback, this);
     m_particle_pub = nh.advertise<visualization_msgs::MarkerArray>("/particles", 1);
-    m_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/pf_pose", 10);
+    m_pose_pub = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose", 10);
     m_pose_icp = new PoseEstimationICP;
     pnh.getParam("num_particles", m_num_particles);
     pnh.getParam("percent_to_drop", m_percent_to_drop);
@@ -50,7 +50,7 @@ void Localization::Localize()
     m_particles = particles;
     pubParticles();
     pruneAndNormalizeParticles();    
-    const tf::Pose final_pose = calcFinalPose();
+    const tf::Pose final_pose = calcFinalPose();    
     setPreviousPose(final_pose);
     pubFinalPose();
 }
@@ -151,9 +151,9 @@ void Localization::calcParticleWeights(std::deque<Particle> &particles)
     const sensor_msgs::LaserScan &fake_scan = m_fake_scan->getFakeScan(m_prev_pose);
     m_prev_scan = *m_scan;
     tf::Pose prev_pose;
-    prev_pose.setOrigin(tf::Vector3(m_prev_pose.position.x, m_prev_pose.position.y, 0));
+    prev_pose.setOrigin(tf::Vector3(m_prev_pose.pose.pose.position.x, m_prev_pose.pose.pose.position.y, 0));
     tf::Quaternion q;
-    tf::quaternionMsgToTF(m_prev_pose.orientation, q);
+    tf::quaternionMsgToTF(m_prev_pose.pose.pose.orientation, q);
     prev_pose.setRotation(q);
     tf::Pose sensor_pose_estimate = prev_pose * m_pose_icp->getTransform(fake_scan, *m_scan);
     sensor_pose_estimate.setOrigin(tf::Vector3(sensor_pose_estimate.getOrigin().getX() + m_gen_sens_x->operator ()(),
@@ -315,16 +315,47 @@ void Localization::integratePoseToCurrentTime(tf::Pose &pose)
 
 void Localization::setPreviousPose(const tf::Pose &pose)
 {
-    tf::poseTFToMsg(pose, m_prev_pose);
+    tf::poseTFToMsg(pose, m_prev_pose.pose.pose);
     m_odom_at_last_scan = m_odom_at_scan;
 }
 
 void Localization::pubFinalPose()
 {
-    geometry_msgs::PoseStamped pose;
+    geometry_msgs::PoseWithCovarianceStamped pose;
     pose.header.stamp = ros::Time::now();
-    pose.pose = m_prev_pose;
+    const std::vector<double> &covariances = calcCovarianceMatrix();
+    pose.pose.covariance[0] = covariances[0];
+    pose.pose.covariance[7] = covariances[1];
+    pose.pose.covariance[35] = covariances[2];
+    pose = m_prev_pose;
     m_pose_pub.publish(pose);
+}
+
+std::vector<double> Localization::calcCovarianceMatrix()
+{
+    std::vector<double> covariances(3);
+    double mean_x = 0;
+    double mean_y = 0;
+    double mean_th = 0;
+    for(const auto &particle : m_particles)
+    {
+        mean_x += particle.weight * particle.pose.getOrigin().getX();
+        mean_y += particle.weight * particle.pose.getOrigin().getY();
+        mean_th += particle.weight * tf::getYaw(particle.pose.getRotation());
+    }
+    double sigma_x = 0;
+    double sigma_y = 0;
+    double sigma_th = 0;
+    for(const auto &particle : m_particles)
+    {
+        sigma_x += particle.weight * std::pow((particle.pose.getOrigin().getX() - mean_x), 2);
+        sigma_y += particle.weight * std::pow((particle.pose.getOrigin().getY() - mean_y), 2);
+        sigma_th += particle.weight * std::pow((tf::getYaw(particle.pose.getRotation()) - mean_th), 2);
+    }
+    covariances[0] = sigma_x;
+    covariances[1] = sigma_y;
+    covariances[2] = sigma_th;
+    return covariances;
 }
 
 void Localization::integrateOdomToScanTime()
@@ -412,7 +443,7 @@ void Localization::poseCallback(const geometry_msgs::PoseWithCovarianceStamped::
         m_have_pose_estimate = true;
     }
     ROS_INFO_STREAM("Pose Estimate Updated Manually");
-    m_prev_pose = msg->pose.pose;
+    m_prev_pose = *msg;
 }
 
 }

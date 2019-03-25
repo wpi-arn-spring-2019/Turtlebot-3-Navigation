@@ -3,7 +3,6 @@
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <fake_scan.hpp>
-#include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <particle.hpp>
 #include <point.hpp>
@@ -45,11 +44,12 @@ private:
     const double calcDistanceScore(const tf::Point &particle_pt, const tf::Point &sensor_pt);
     const double calcRotationScore(const tf::Quaternion &particle_q, const tf::Quaternion &sensor_q);
     void pruneAndNormalizeParticles();
-    const tf::Pose calcFinalPose();
+    const tf::Pose calcFinalPose();    
     void pubParticles();
     void integratePoseToCurrentTime(tf::Pose &pose);
-    void setPreviousPose(const tf::Pose &poes);
+    void setPreviousPose(const tf::Pose &pose);
     void pubFinalPose();
+    std::vector<double> calcCovarianceMatrix();
     void integrateOdomToScanTime();
 
     ros::Subscriber m_scan_sub;
@@ -63,7 +63,7 @@ private:
     FakeScan *m_fake_scan;
 
     std::deque<Particle> m_particles;
-    geometry_msgs::Pose m_prev_pose;
+    geometry_msgs::PoseWithCovarianceStamped m_prev_pose;
 
     sensor_msgs::LaserScan::ConstPtr m_scan;
     sensor_msgs::LaserScan m_prev_scan;

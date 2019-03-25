@@ -6,7 +6,7 @@ namespace Turtlebot
 Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {
     m_traj_sub = nh.subscribe<turtlebot_msgs::Trajectory>("/trajectory", 10, &Controller::trajectoryCallback, this);
-    m_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/pf_pose", 10, &Controller::poseCallback, this);
+    m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose", 10, &Controller::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &Controller::odomCallback, this);
     m_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
     m_call_type = boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2);
@@ -155,10 +155,10 @@ const TurtlebotState Controller::getCurrentState()
 {
     integrateOdomToCurrentTime();
     integratePoseToCurrentTime();
-    const double &x = m_pose_at_control.position.x;
-    const double &y = m_pose_at_control.position.y;
+    const double &x = m_pose_at_control.pose.position.x;
+    const double &y = m_pose_at_control.pose.position.y;
     tf::Quaternion q;
-    tf::quaternionMsgToTF(m_pose_at_control.orientation, q);
+    tf::quaternionMsgToTF(m_pose_at_control.pose.orientation, q);
     const double &th = tf::getYaw(q);
     const double &v = std::sqrt(std::pow(m_odom_at_control.twist.twist.linear.x, 2)+
                                 std::pow(m_odom_at_control.twist.twist.linear.y, 2));
@@ -230,15 +230,15 @@ void Controller::integratePoseToCurrentTime()
     tf::quaternionMsgToTF(m_odom->pose.pose.orientation, q);
     const double &yaw = tf::getYaw(q);
     const double &yaw_f = yaw + m_odom_at_pose.twist.twist.linear.z * dt;
-    const double &x_f = m_pose->pose.position.x + (m_odom->twist.twist.linear.x * dt + acc_x * std::pow(dt, 2) / 2) * cos(yaw);
-    const double &y_f = m_pose->pose.position.y + (m_odom->twist.twist.linear.y * dt + acc_y * std::pow(dt, 2) / 2) * sin(yaw);
+    const double &x_f = m_pose->pose.pose.position.x + (m_odom->twist.twist.linear.x * dt + acc_x * std::pow(dt, 2) / 2) * cos(yaw);
+    const double &y_f = m_pose->pose.pose.position.y + (m_odom->twist.twist.linear.y * dt + acc_y * std::pow(dt, 2) / 2) * sin(yaw);
     tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
     q_f.normalize();
-    m_pose_at_control.position.x = x_f;
-    m_pose_at_control.position.y = y_f;
+    m_pose_at_control.pose.position.x = x_f;
+    m_pose_at_control.pose.position.y = y_f;
     geometry_msgs::Quaternion q_;
     tf::quaternionTFToMsg(q_f, q_);
-    m_pose_at_control.orientation = q_;
+    m_pose_at_control.pose.orientation = q_;
 }
 
 void Controller::integrateOdomToCurrentTime()
@@ -355,7 +355,7 @@ void Controller::trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &
     m_traj = msg;
 }
 
-void Controller::poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void Controller::poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg)
 {
     if(!m_have_pose)
     {

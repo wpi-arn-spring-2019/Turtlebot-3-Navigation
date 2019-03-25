@@ -3,7 +3,7 @@
 namespace Turtlebot
 {
 
-const sensor_msgs::LaserScan FakeScan::getFakeScan(const geometry_msgs::Pose &pose)
+const sensor_msgs::LaserScan FakeScan::getFakeScan(const geometry_msgs::PoseWithCovarianceStamped &pose)
 {
     sensor_msgs::LaserScan scan = m_scan;
     scan.ranges.clear();
@@ -38,16 +38,16 @@ const int FakeScan::getLocation(const Point &pt) const
     return x + y * height;
 }
 
-const double FakeScan::laserThrower(const geometry_msgs::Pose &pose, const float &inc) const
+const double FakeScan::laserThrower(const geometry_msgs::PoseWithCovarianceStamped &pose, const float &inc) const
 {
 
     //////////////////////////////////////////////////////////////////////////////////
     //   modify this quaternion
     tf::Quaternion q;
-    q.setW(pose.orientation.w);
-    q.setX(pose.orientation.x);
-    q.setY(pose.orientation.y);
-    q.setZ(pose.orientation.z);
+    q.setW(pose.pose.pose.orientation.w);
+    q.setX(pose.pose.pose.orientation.x);
+    q.setY(pose.pose.pose.orientation.y);
+    q.setZ(pose.pose.pose.orientation.z);
     double roll, pitch, yaw;
     tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
     double ray_dist = 0;   // find the minimum ray_dist and put it instead of zero
@@ -55,14 +55,14 @@ const double FakeScan::laserThrower(const geometry_msgs::Pose &pose, const float
 
     double angle = yaw + inc;
 
-    const double &x = pose.position.x + ray_dist * cos(angle);
-    const double &y = pose.position.y + ray_dist * sin(angle);
+    const double &x = pose.pose.pose.position.x + ray_dist * cos(angle);
+    const double &y = pose.pose.pose.position.y + ray_dist * sin(angle);
     Point pt(x, y);
 
     while(int(m_map.data[getLocation(pt)]) != 100)
     {
-        pt.x = pose.position.x + ray_dist * cos(angle);
-        pt.y = pose.position.y + ray_dist * sin(angle);
+        pt.x = pose.pose.pose.position.x + ray_dist * cos(angle);
+        pt.y = pose.pose.pose.position.y + ray_dist * sin(angle);
         ray_dist += 0.01;
     }
     return ray_dist;

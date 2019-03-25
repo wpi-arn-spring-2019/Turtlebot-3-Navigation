@@ -8,7 +8,7 @@ LocalPlanner::LocalPlanner(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_costmap_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 10, &LocalPlanner::costmapCallback, this);
     m_goal_pose_sub = nh.subscribe<turtlebot_msgs::GoalPose>("/goal_pose", 10, &LocalPlanner::goalPoseCallback, this);
     m_rviz_goal_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/move_base_simple/goal", 10, &LocalPlanner::rvizGoalPoseCallback, this);
-    m_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/pf_pose", 10, &LocalPlanner::poseCallback, this);
+    m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose", 10, &LocalPlanner::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &LocalPlanner::odomCallback, this);
     m_trajectory_pub = nh.advertise<turtlebot_msgs::Trajectory>("/trajectory", 10);
     m_path_pub = nh.advertise<nav_msgs::Path>("/planned_path", 10);
@@ -118,14 +118,14 @@ void LocalPlanner::clearFrontier()
     m_node_id = 0;
     double roll, pitch, yaw;
     tf::Quaternion q;
-    q.setW(m_pose->pose.orientation.w);
-    q.setX(m_pose->pose.orientation.x);
-    q.setY(m_pose->pose.orientation.y);
-    q.setZ(m_pose->pose.orientation.z);
+    q.setW(m_pose->pose.pose.orientation.w);
+    q.setX(m_pose->pose.pose.orientation.x);
+    q.setY(m_pose->pose.pose.orientation.y);
+    q.setZ(m_pose->pose.pose.orientation.z);
     tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
     const double &vel = std::sqrt(std::pow(m_turtlebot_velocity.linear.x, 2) + std::pow(m_turtlebot_velocity.linear.y, 2));
-    const GraphNode &node = GraphNode(Point<double>(m_pose->pose.position.x, m_pose->pose.position.y),
-                                      Point<double>(m_pose->pose.position.x, m_pose->pose.position.y),
+    const GraphNode &node = GraphNode(Point<double>(m_pose->pose.pose.position.x, m_pose->pose.pose.position.y),
+                                      Point<double>(m_pose->pose.pose.position.x, m_pose->pose.pose.position.y),
                                       m_node_id, m_node_id, yaw, vel, 0.0, std::numeric_limits<double>::infinity());
     m_node_id++;
     m_frontier.push(node);
@@ -498,7 +498,7 @@ void LocalPlanner::rvizGoalPoseCallback(const geometry_msgs::PoseStamped::ConstP
     }
 }
 
-void LocalPlanner::poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
+void LocalPlanner::poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg)
 {
     if(!m_have_pose)
     {

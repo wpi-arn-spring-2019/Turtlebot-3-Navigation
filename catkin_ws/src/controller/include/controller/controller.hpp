@@ -2,7 +2,7 @@
 #include <ros/ros.h>
 #include <controller/ControllerConfig.h>
 #include <dynamic_reconfigure/server.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <pd_controller.hpp>
@@ -28,7 +28,7 @@ public:
 private:
     void dynamicReconfigureCallback(controller::ControllerConfig &config, uint32_t level);
     void trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &msg);
-    void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
+    void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
     void pubControls(const geometry_msgs::Twist &control) const;
     void updateDynamicReconfigure();
@@ -54,8 +54,8 @@ private:
     ros::Time m_current_time;
 
     turtlebot_msgs::Trajectory::ConstPtr m_traj;
-    geometry_msgs::PoseStamped::ConstPtr m_pose;
-    geometry_msgs::Pose m_pose_at_control;
+    geometry_msgs::PoseWithCovarianceStamped::ConstPtr m_pose;
+    geometry_msgs::PoseWithCovariance m_pose_at_control;
     nav_msgs::Odometry::ConstPtr m_odom;
     nav_msgs::Odometry::ConstPtr m_prev_odom;
     nav_msgs::Odometry m_odom_at_pose;

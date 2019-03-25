@@ -4,7 +4,7 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <unsupported/Eigen/Splines>
-#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <local_planner_types.hpp>
 #include <unordered_map>
@@ -40,7 +40,7 @@ private:
     void costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
     void goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &msg);
     void rvizGoalPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
-    void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
+    void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
 
     //setup methods
@@ -133,7 +133,7 @@ private:
     turtlebot_msgs::GoalPose m_goal_pose;
     nav_msgs::OccupancyGrid::ConstPtr m_map;
     geometry_msgs::Twist m_turtlebot_velocity;
-    geometry_msgs::PoseStamped::ConstPtr m_pose;
+    geometry_msgs::PoseWithCovarianceStamped::ConstPtr m_pose;
 
     //flags    
     bool m_have_costmap = false;
