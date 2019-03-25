@@ -322,12 +322,12 @@ void Localization::setPreviousPose(const tf::Pose &pose)
 void Localization::pubFinalPose()
 {
     geometry_msgs::PoseWithCovarianceStamped pose;
-    pose.header.stamp = ros::Time::now();
+    pose.header.stamp = ros::Time::now();    
+    pose = m_prev_pose;
     const std::vector<double> &covariances = calcCovarianceMatrix();
     pose.pose.covariance[0] = covariances[0];
     pose.pose.covariance[7] = covariances[1];
     pose.pose.covariance[35] = covariances[2];
-    pose = m_prev_pose;
     m_pose_pub.publish(pose);
 }
 
@@ -337,11 +337,13 @@ std::vector<double> Localization::calcCovarianceMatrix()
     double mean_x = 0;
     double mean_y = 0;
     double mean_th = 0;
+    double sum_weight_squares = 0;
     for(const auto &particle : m_particles)
     {
         mean_x += particle.weight * particle.pose.getOrigin().getX();
         mean_y += particle.weight * particle.pose.getOrigin().getY();
         mean_th += particle.weight * tf::getYaw(particle.pose.getRotation());
+        sum_weight_squares += std::pow(particle.weight, 2);
     }
     double sigma_x = 0;
     double sigma_y = 0;
@@ -352,9 +354,9 @@ std::vector<double> Localization::calcCovarianceMatrix()
         sigma_y += particle.weight * std::pow((particle.pose.getOrigin().getY() - mean_y), 2);
         sigma_th += particle.weight * std::pow((tf::getYaw(particle.pose.getRotation()) - mean_th), 2);
     }
-    covariances[0] = sigma_x;
-    covariances[1] = sigma_y;
-    covariances[2] = sigma_th;
+    covariances[0] = sigma_x / (1 - sum_weight_squares);
+    covariances[1] = sigma_y / (1 - sum_weight_squares);
+    covariances[2] = sigma_th / (1 - sum_weight_squares);
     return covariances;
 }
 
