@@ -9,6 +9,7 @@
 #include <pid_controller.hpp>
 #include <pd_ff_controller.hpp>
 #include <pid_ff_controller.hpp>
+#include <smith_predictor.hpp>
 #include <tf/tf.h>
 #include <turtlebot_msgs/Trajectory.h>
 #include <turtlebot_state.hpp>
@@ -20,7 +21,7 @@ namespace Turtlebot
 class Controller
 {
 public:
-    Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh);
+    Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &rate);
     ~Controller();
 
     void control();
@@ -33,7 +34,7 @@ private:
     void pubControls(const geometry_msgs::Twist &control) const;
     void updateDynamicReconfigure();
 
-    void initializeController(ros::NodeHandle &pnh);
+    void initializeController(ros::NodeHandle &pnh, const double &rate);
     void getGains(ros::NodeHandle &pnh);
     const TurtlebotState getCurrentState();
     const TurtlebotState getDesiredState() const;
@@ -61,7 +62,7 @@ private:
     nav_msgs::Odometry m_odom_at_pose;
     nav_msgs::Odometry m_odom_at_control;
 
-    enum controller_type{PD = 1, PID = 2, PD_FF = 3, PID_FF = 4, DF_LINEARIZATION = 5};
+    enum controller_type{PD = 1, PID = 2, PD_FF = 3, PID_FF = 4, DFL = 5};
     controller_type m_cont_type;
 
     std::vector<double> m_kp_gains_w;
@@ -76,7 +77,12 @@ private:
     PIDController *m_pid_cont;
     PDFeedForwardController *m_pd_ff_cont;
     PIDFeedForwardController *m_pid_ff_cont;
+    SmithPredictor<PDController> *m_smith_pred_pd;
+    SmithPredictor<PIDController> *m_smith_pred_pid;
+    SmithPredictor<PDFeedForwardController> *m_smith_pred_pd_ff;
+    SmithPredictor<PIDFeedForwardController> *m_smith_pred_pid_ff;
 
+    double m_rate;
 
     bool m_goal_reached = false;
     bool m_have_trajectory = false;

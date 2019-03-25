@@ -3,7 +3,7 @@
 namespace Turtlebot
 {
 
-Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh)
+Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &rate) : m_rate(rate)
 {
     m_traj_sub = nh.subscribe<turtlebot_msgs::Trajectory>("/trajectory", 10, &Controller::trajectoryCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose", 10, &Controller::poseCallback, this);
@@ -18,7 +18,7 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_ki_gains_v.resize(5);
     m_kd_gains_v.resize(5);
     m_server->setCallback(m_call_type);
-    initializeController(pnh);
+    initializeController(pnh, m_rate);
 }
 
 Controller::~Controller()
@@ -28,10 +28,14 @@ Controller::~Controller()
     delete m_pid_cont;
     delete m_pd_cont;
     delete m_pid_ff_cont;
+    delete m_smith_pred_pd;
+    delete m_smith_pred_pid;
+    delete m_smith_pred_pd_ff;
+    delete m_smith_pred_pid_ff;
 }
 
-void Controller::initializeController(ros::NodeHandle &pnh)
-{   
+void Controller::initializeController(ros::NodeHandle &pnh, const double &m_rate)
+{       
     m_server->getConfigDefault(m_config);
     getGains(pnh);
     int type;
@@ -47,6 +51,7 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_config.kd_v = m_kd_gains_v[0];
         m_cont_type = controller_type::PD;
         m_pd_cont = new PDController();
+        m_smith_pred_pd = new SmithPredictor<PDController>(m_rate);
         m_pd_cont->setGains(m_kp_gains_w[0], m_kd_gains_w[0],
                             m_kp_gains_v[0], m_kd_gains_v[0]);
     }
@@ -61,6 +66,7 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_config.kd_v = m_kd_gains_v[1];
         m_cont_type = controller_type::PID;
         m_pid_cont = new PIDController();
+        m_smith_pred_pid = new SmithPredictor<PIDController>(m_rate);
         m_pid_cont->initializeController();
         m_pid_cont->setGains(m_kp_gains_w[1], m_ki_gains_w[1], m_kd_gains_w[1],
                              m_kp_gains_v[1], m_ki_gains_v[1], m_kd_gains_v[1]);
@@ -76,6 +82,7 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_config.kd_v = m_kd_gains_v[2];
         m_cont_type = controller_type::PID_FF;
         m_pd_ff_cont = new PDFeedForwardController();
+        m_smith_pred_pd_ff = new SmithPredictor<PDFeedForwardController>(m_rate);
         m_pd_ff_cont->setGains(m_kp_gains_w[2], m_kd_gains_w[2],
                                m_kp_gains_v[2], m_kd_gains_v[2]);
     }
@@ -90,6 +97,7 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_config.kd_v = m_kd_gains_v[3];
         m_cont_type = controller_type::PID_FF;
         m_pid_ff_cont = new PIDFeedForwardController();
+        m_smith_pred_pid_ff = new SmithPredictor<PIDFeedForwardController>(m_rate);
         m_pid_ff_cont->initializeController();
         m_pid_ff_cont->setGains(m_kp_gains_w[3], m_ki_gains_w[3], m_kd_gains_w[3],
                                 m_kp_gains_v[3], m_ki_gains_v[3], m_kd_gains_v[3]);
@@ -292,6 +300,7 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
         {
             m_cont_type = Controller::PD;
             m_pd_cont = new PDController;
+            m_smith_pred_pd = new SmithPredictor<PDController>(m_rate);
             m_pd_cont->setGains(m_kp_gains_w[0], m_kd_gains_w[0],
                                 m_kp_gains_v[0], m_kd_gains_v[0]);
             config.kp_w = m_kp_gains_w[0];
@@ -305,6 +314,7 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
         {
             m_cont_type = Controller::PID;
             m_pid_cont = new PIDController;
+            m_smith_pred_pid = new SmithPredictor<PIDController>(m_rate);
             m_pid_cont->initializeController();
             m_pid_cont->setGains(m_kp_gains_w[1], m_ki_gains_w[1], m_kd_gains_w[1],
                                  m_kp_gains_v[1], m_ki_gains_v[1], m_kd_gains_v[1]);
@@ -319,6 +329,7 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
         {
             m_cont_type = Controller::PD_FF;
             m_pd_ff_cont = new PDFeedForwardController;
+            m_smith_pred_pd_ff = new SmithPredictor<PDFeedForwardController>(m_rate);
             m_pd_ff_cont->setGains(m_kp_gains_w[2], m_kd_gains_w[2],
                                    m_kp_gains_v[2], m_kd_gains_v[2]);
             config.kp_w = m_kp_gains_w[2];
@@ -332,6 +343,7 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
         {
             m_cont_type = Controller::PID_FF;
             m_pid_ff_cont = new PIDFeedForwardController;
+            m_smith_pred_pid_ff = new SmithPredictor<PIDFeedForwardController>(m_rate);
             m_pid_ff_cont->initializeController();
             m_pid_ff_cont->setGains(m_kp_gains_w[3], m_ki_gains_w[3], m_kd_gains_w[3],
                                     m_kp_gains_v[3], m_ki_gains_v[3], m_kd_gains_v[3]);
