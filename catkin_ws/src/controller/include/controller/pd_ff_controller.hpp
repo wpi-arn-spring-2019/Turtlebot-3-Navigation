@@ -1,6 +1,6 @@
 #pragma once
 #include <ros/ros.h>
-#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <turtlebot_state.hpp>
 
 namespace Turtlebot
@@ -12,7 +12,7 @@ public:
     PDFeedForwardController(){}
     ~PDFeedForwardController();
 
-    const geometry_msgs::Twist getControls(const TurtlebotState &current_state, const TurtlebotState &desired_state);
+    const geometry_msgs::TwistStamped getControls(const TurtlebotState &current_state, const TurtlebotState &desired_state);
     void setGains(const double &kp_w, const double &kd_w,
                   const double &kp_v, const double &kd_v);
 

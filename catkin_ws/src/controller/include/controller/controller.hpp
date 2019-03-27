@@ -31,13 +31,13 @@ private:
     void trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
-    void pubControls(const geometry_msgs::Twist &control) const;
+    void pubControls(const geometry_msgs::TwistStamped &control) const;
     void updateDynamicReconfigure();
 
-    void initializeController(ros::NodeHandle &pnh, const double &rate);
+    void initializeController(ros::NodeHandle &pnh);
     void getGains(ros::NodeHandle &pnh);
     const TurtlebotState getCurrentState();
-    const TurtlebotState getDesiredState() const;
+    const TurtlebotState getDesiredState(const bool &next) const;
     const TurtlebotState integrateDesiredStateToCurrentTime(const int &traj_it, const double &dt) const;
     void integratePoseToCurrentTime();
     void integrateOdomToCurrentTime();
@@ -72,7 +72,6 @@ private:
     std::vector<double> m_ki_gains_v;
     std::vector<double> m_kd_gains_v;
 
-
     PDController *m_pd_cont;
     PIDController *m_pid_cont;
     PDFeedForwardController *m_pd_ff_cont;
@@ -84,6 +83,7 @@ private:
 
     double m_rate;
 
+    bool m_first_it = true;
     bool m_goal_reached = false;
     bool m_have_trajectory = false;
     bool m_have_pose = false;

@@ -8,7 +8,7 @@ PDFeedForwardController::~PDFeedForwardController()
     delete m_prev_state;
 }
 
-const geometry_msgs::Twist PDFeedForwardController::getControls(const TurtlebotState &current_state, const TurtlebotState &desired_state)
+const geometry_msgs::TwistStamped PDFeedForwardController::getControls(const TurtlebotState &current_state, const TurtlebotState &desired_state)
 {
     if(m_first_it)
     {
@@ -18,7 +18,8 @@ const geometry_msgs::Twist PDFeedForwardController::getControls(const TurtlebotS
     }
     ros::Time current_time = ros::Time::now();
     const double &dt = ros::Duration(current_time - m_prev_time).toSec();
-    geometry_msgs::Twist control;
+    geometry_msgs::TwistStamped control;
+    control.header.stamp = current_time;
     const double &error_w = current_state.th_dot - desired_state.th_dot;
     double derivative_w = (current_state.th_dot - m_prev_state->th_dot) / dt;
     if(std::isnan(derivative_w) || std::isinf(derivative_w))
@@ -26,7 +27,7 @@ const geometry_msgs::Twist PDFeedForwardController::getControls(const TurtlebotS
         derivative_w = 0;
     }
     const double &control_w = desired_state.th_dot - m_kp_w * error_w - m_kd_w * derivative_w;
-    control.angular.z = control_w;
+    control.twist.angular.z = control_w;
     const double &error_v = current_state.v - desired_state.v;
     double derivative_v = (current_state.v - m_prev_state->v) / dt;
     if(std::isnan(derivative_v) || std::isinf(derivative_v))
@@ -34,7 +35,7 @@ const geometry_msgs::Twist PDFeedForwardController::getControls(const TurtlebotS
         derivative_v = 0;
     }
     const double &control_v = desired_state.v - m_kp_v * error_v - m_kd_v * derivative_v;
-    control.linear.x = control_v;
+    control.twist.linear.x = control_v;
     m_prev_time = current_time;
     m_prev_state = new TurtlebotState(current_state);
     return control;
