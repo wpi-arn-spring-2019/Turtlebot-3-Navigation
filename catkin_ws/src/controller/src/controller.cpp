@@ -184,7 +184,7 @@ const TurtlebotState Controller::getDesiredState(const bool &next) const
     double dt = start_time - m_current_time.toSec();
     if(next)
     {
-        dt += 1 / m_rate;
+        dt -= 1 / m_rate;
     }
     while(dt <= 0)
     {

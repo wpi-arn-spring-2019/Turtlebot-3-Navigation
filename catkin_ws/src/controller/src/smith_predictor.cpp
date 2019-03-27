@@ -22,28 +22,22 @@ SmithPredictor<ContType>::~SmithPredictor()
 {
     delete m_cont;
     delete m_predict_cont;
-    delete m_prev_state;
-    delete m_prev_desired_state;
 }
 
 template <class ContType>
 
 const geometry_msgs::TwistStamped SmithPredictor<ContType>::predictControls(const TurtlebotState &current_state,
-                                                                     const TurtlebotState &desired_state,
-                                                                     const TurtlebotState &next_desired_state,
-                                                                     const nav_msgs::Odometry &odom)
+                                                                            const TurtlebotState &desired_state,
+                                                                            const TurtlebotState &next_desired_state,
+                                                                            const nav_msgs::Odometry &odom)
 {
+    const geometry_msgs::TwistStamped &current_controls = m_cont->getControls(current_state, desired_state);
     if(m_first_it)
     {
         m_first_it = false;
-        m_prev_state = new TurtlebotState(current_state);
-        m_prev_desired_state = new TurtlebotState(desired_state);
-        m_prev_controls = geometry_msgs::TwistStamped();
+        m_prev_controls = current_controls;
     }
-    const geometry_msgs::TwistStamped &current_controls = m_cont->getControls(current_state, desired_state);
     const TurtlebotState &predicted_state = predictFeedback(current_controls, odom);
-    m_prev_state = new TurtlebotState(current_state);
-    m_prev_desired_state = new TurtlebotState(desired_state);
     geometry_msgs::TwistStamped predicted_controls = m_predict_cont->getControls(predicted_state, next_desired_state);
     m_prev_controls = predicted_controls;
     return predicted_controls;
@@ -55,15 +49,13 @@ const TurtlebotState SmithPredictor<ContType>::predictFeedback(const geometry_ms
                                                                const nav_msgs::Odometry &odom)
 {
     const double &dt = ros::Duration(odom.header.stamp - m_prev_controls.header.stamp).toSec();
-    const double &predicted_linear_x_vel = odom.twist.twist.linear.x / m_prev_controls.twist.linear.x * current_controls.twist.linear.x;
-    const double &predicted_linear_y_vel = odom.twist.twist.linear.y / m_prev_controls.twist.linear.y * current_controls.twist.linear.y;
-    const double &predicted_vel = std::sqrt(std::pow(predicted_linear_x_vel, 2) + std::pow(predicted_linear_y_vel, 2));
-    const double &predicted_x = odom.pose.pose.position.x + predicted_linear_x_vel * dt;
-    const double &predicted_y = odom.pose.pose.position.y + predicted_linear_y_vel * dt;
+    const double &predicted_vel = odom.twist.twist.linear.x / m_prev_controls.twist.linear.x * current_controls.twist.linear.x;
     const double &predicted_th_dot = odom.twist.twist.angular.z / m_prev_controls.twist.angular.z * current_controls.twist.angular.z;
     tf::Quaternion q;
     tf::quaternionMsgToTF(odom.pose.pose.orientation, q);
     const double &predicted_th = tf::getYaw(q) + predicted_th_dot * dt;
+    const double &predicted_x = odom.pose.pose.position.x + predicted_vel * dt * cos(tf::getYaw(q));
+    const double &predicted_y = odom.pose.pose.position.y + predicted_vel * dt * sin(tf::getYaw(q));
     return TurtlebotState(predicted_x, predicted_y, predicted_th, predicted_vel, predicted_th_dot);
 }
 

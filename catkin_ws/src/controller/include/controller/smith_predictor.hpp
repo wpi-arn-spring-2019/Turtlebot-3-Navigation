@@ -34,8 +34,6 @@ private:
 
     ContType *m_cont;
     ContType *m_predict_cont;
-    TurtlebotState *m_prev_state;
-    TurtlebotState *m_prev_desired_state;
     geometry_msgs::TwistStamped m_prev_controls;
 
     double m_time_delay;
