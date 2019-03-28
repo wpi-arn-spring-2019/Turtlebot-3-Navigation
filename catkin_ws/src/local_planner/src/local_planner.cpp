@@ -167,6 +167,16 @@ const bool LocalPlanner::checkForGoal(const GraphNode &node)
     {        
         return false;
     }
+    m_frontier.pop();
+    closeNode(node);
+    GraphNode goal_node(Point<double>(m_goal_pose.x, m_goal_pose.y),
+                        node.child_point,
+                        m_node_id,
+                        node.id,
+                        m_goal_pose.heading,
+                        m_goal_pose.speed,
+                        0, 0);
+    m_frontier.push(goal_node);
     return true;
 }
 
@@ -403,8 +413,7 @@ void LocalPlanner::reconstructTrajectory()
         reverse_trajectory.push_back(current_node);
         current_node = m_nodes[current_node.parent_id];
     }
-    const std::vector<GraphNode> trajectory = reverseTrajectory(reverse_trajectory);
-    pubTrajectory(trajectory);
+    pubTrajectory(reverseTrajectory(reverse_trajectory));
 }
 
 const std::vector<GraphNode> LocalPlanner::reverseTrajectory(const std::vector<GraphNode> &reverse_traj)

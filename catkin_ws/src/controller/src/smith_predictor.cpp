@@ -59,5 +59,4 @@ const TurtlebotState SmithPredictor<ContType>::predictFeedback(const geometry_ms
     return TurtlebotState(predicted_x, predicted_y, predicted_th, predicted_vel, predicted_th_dot);
 }
 
-
 }
