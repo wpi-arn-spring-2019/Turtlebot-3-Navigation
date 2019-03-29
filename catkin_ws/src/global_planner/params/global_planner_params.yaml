@@ -1,0 +1,10 @@
+collision_buffer_distance: 0.15
+spline_order: 3
+search_res: 0.025
+angular_search_res: 0.1
+goal_pos_tolerance: 0.05
+timeout_ms: 1000
+
+turtlebot_radius: 0.21
+angular_col_res: 0.1
+radial_col_res: 0.1

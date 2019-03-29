@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+    <node name="global_planner_node" pkg="global_planner" type="global_planner_node" output="screen">
+        <rosparam command="load" file="$(find global_planner)/params/global_planner_params.yaml"/>
+    </node>
+</launch>
