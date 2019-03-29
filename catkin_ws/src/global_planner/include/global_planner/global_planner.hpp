@@ -1,5 +1,4 @@
 #pragma once
-
 #include <ros/ros.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -9,12 +8,9 @@
 #include <global_planner_types.hpp>
 #include <unordered_map>
 #include <nav_msgs/OccupancyGrid.h>
-#include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <turtlebot_msgs/GoalPose.h>
-#include <turtlebot_msgs/Trajectory.h>
 #include <queue>
-#include <stdlib.h>
 #include <tf/transform_listener.h>
 #include <urdf/model.h>
 
@@ -75,6 +71,7 @@ private:
     //output functions
     void reconstructTrajectory();
     const std::vector<GraphNode> reverseTrajectory(const std::vector<GraphNode> &reverse_traj);
+    const std::vector<GraphNode> interpolateTrajectory(const std::vector<GraphNode> &traj);
     void pubTrajectory(const std::vector<GraphNode> &traj);
 
     //pubsub
@@ -110,6 +107,7 @@ private:
     double m_angular_search_res;
     double m_spline_order;
     double m_goal_pos_tolerance;
+    int m_num_pts_final_path;
     double m_timeout_ms;
     double m_radius;
     double m_angular_col_res;

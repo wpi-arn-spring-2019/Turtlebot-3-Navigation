@@ -23,6 +23,7 @@ void GlobalPlanner::getParams(ros::NodeHandle &pnh)
       pnh.getParam("angular_search_res", m_angular_search_res);
       pnh.getParam("spline_order", m_spline_order);
       pnh.getParam("goal_pos_tolerance", m_goal_pos_tolerance);
+      pnh.getParam("num_pts_final_path", m_num_pts_final_path);
       pnh.getParam("timeout_ms", m_timeout_ms);
       pnh.getParam("turtlebot_radius", m_radius);
       pnh.getParam("angular_col_res", m_angular_col_res);
@@ -256,7 +257,7 @@ void GlobalPlanner::reconstructTrajectory()
         reverse_trajectory.push_back(current_node);
         current_node = m_nodes[current_node.parent_id];
     }
-    pubTrajectory(reverseTrajectory(reverse_trajectory));
+    pubTrajectory(interpolateTrajectory(reverseTrajectory(reverse_trajectory)));
 }
 
 const std::vector<GraphNode> GlobalPlanner::reverseTrajectory(const std::vector<GraphNode> &reverse_traj)
@@ -269,14 +270,36 @@ const std::vector<GraphNode> GlobalPlanner::reverseTrajectory(const std::vector<
     return traj;
 }
 
+const std::vector<GraphNode> GlobalPlanner::interpolateTrajectory(const std::vector<GraphNode> &traj)
+{
+    Eigen::MatrixXd points(2, traj.size());
+    for(int traj_it = 0; traj_it < traj.size(); traj_it++)
+    {
+        points(0, traj_it) = traj[traj_it].child_point.x;
+        points(1, traj_it) = traj[traj_it].child_point.y;
+    }
+    const Spline1d &spline = Spline1dFitting::Interpolate(points, m_spline_order);
+    std::vector<GraphNode> interpolated_traj;
+    const double &spline_res = 1.0 / double(m_num_pts_final_path);
+    double spline_value = 0;
+    while(spline_value <= 1)
+    {
+        const Eigen::MatrixXd &spline_pt = spline(spline_value);
+        const double &x = spline_pt(0);
+        const double &y = spline_pt(1);
+        GraphNode node;
+        node.child_point.x = x;
+        node.child_point.y = y;
+        interpolated_traj.push_back(node);
+        spline_value += spline_res;
+    }
+    return interpolated_traj;
+}
+
 void GlobalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
 {
-    turtlebot_msgs::Trajectory trajectory;
     nav_msgs::Path path;
-    trajectory.header.stamp = ros::Time::now();
     path.header.stamp = m_goal_pose.header.stamp;
-    trajectory.max_accel = m_goal_pose.max_accel;
-    trajectory.max_speed = m_goal_pose.max_speed;
     path.header.frame_id = "/map";
     for(int traj_it = 0; traj_it < traj.size(); traj_it++)
     {

@@ -1,8 +1,9 @@
 collision_buffer_distance: 0.15
 spline_order: 3
-search_res: 0.025
+search_res: 0.05
 angular_search_res: 0.1
 goal_pos_tolerance: 0.05
+num_pts_final_path: 1000
 timeout_ms: 1000
 
 turtlebot_radius: 0.21
