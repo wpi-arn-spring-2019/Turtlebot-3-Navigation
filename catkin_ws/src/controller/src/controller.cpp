@@ -5,7 +5,7 @@ namespace Turtlebot
 
 Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &rate) : m_rate(rate)
 {
-    m_traj_sub = nh.subscribe<turtlebot_msgs::Trajectory>("/trajectory", 10, &Controller::trajectoryCallback, this);
+    m_traj_sub = nh.subscribe<turtlebot_msgs::Trajectory>("/local_trajectory", 10, &Controller::trajectoryCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose", 10, &Controller::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &Controller::odomCallback, this);
     m_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+    <node name="local_navigator_node" pkg="local_navigator" type="local_navigator_node" output="screen">
+        <rosparam command="load" file="$(find local_navigator)/params/local_navigator_params.yaml"/>
+    </node>
+</launch>

@@ -6,11 +6,10 @@ namespace Turtlebot
 LocalPlanner::LocalPlanner(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {
     m_costmap_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 10, &LocalPlanner::costmapCallback, this);
-    m_goal_pose_sub = nh.subscribe<turtlebot_msgs::GoalPose>("/goal_pose", 10, &LocalPlanner::goalPoseCallback, this);
-    m_rviz_goal_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/move_base_simple/goal", 10, &LocalPlanner::rvizGoalPoseCallback, this);
+    m_goal_pose_sub = nh.subscribe<turtlebot_msgs::GoalPose>("/local_goal_pose", 10, &LocalPlanner::goalPoseCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose", 10, &LocalPlanner::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &LocalPlanner::odomCallback, this);
-    m_trajectory_pub = nh.advertise<turtlebot_msgs::Trajectory>("/trajectory", 10);
+    m_trajectory_pub = nh.advertise<turtlebot_msgs::Trajectory>("/local_trajectory", 10);
     m_path_pub = nh.advertise<nav_msgs::Path>("/planned_path", 10);
     m_goal_pub = nh.advertise<geometry_msgs::PoseStamped>("/goal", 100);
     getParams(pnh);
@@ -291,9 +290,8 @@ const double LocalPlanner::calcG(const Point<double> &pt, const GraphNode &paren
 
 const double LocalPlanner::calcH(const Point<double> &pt, const Point<double> &cur_pt, const double &heading, const double &velocity, const Spline1d &spline)
 {
-    const double &goal_x = m_goal_pose.x;
-    const double &goal_y = m_goal_pose.y;
-    const double &max_dist = sqrt(pow(goal_x, 2) + pow(goal_y, 2));
+    const double &max_dist = calcDistanceBetween(Point<double>(m_pose->pose.pose.position.x, m_pose->pose.pose.position.y),
+                                                 Point<double>(m_goal_pose.x, m_goal_pose.y));
     const double &dist_to_goal = calcDistanceBetween(pt, Point<double>(m_goal_pose.x, m_goal_pose.y));
     const double &dist_heuristic = dist_to_goal / max_dist * 100;
     const double &target_heading = calcTargetHeading(cur_pt, velocity, spline);
@@ -486,23 +484,6 @@ void LocalPlanner::goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &ms
     {
         have_goal = true;
         m_goal_pose = *msg;
-        planPath();
-    }
-}
-
-void LocalPlanner::rvizGoalPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
-{
-    if(m_have_costmap && m_have_pose && m_have_odom)
-    {
-        have_goal = true;
-        tf::Quaternion q;
-        tf::quaternionMsgToTF(msg->pose.orientation, q);
-        m_goal_pose.heading = tf::getYaw(q);
-        m_goal_pose.x = msg->pose.position.x;
-        m_goal_pose.y = msg->pose.position.y;
-        m_goal_pose.speed = 0.0;
-        m_goal_pose.max_speed = 0.1;
-        m_goal_pose.max_accel = 0.2;
         planPath();
     }
 }
