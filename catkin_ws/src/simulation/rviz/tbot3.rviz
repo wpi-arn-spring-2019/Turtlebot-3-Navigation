@@ -24,7 +24,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: LaserScan
 Visualization Manager:
   Class: ""
   Displays:
@@ -110,7 +110,7 @@ Visualization Manager:
       Marker Topic: particles
       Name: MarkerArray
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -183,7 +183,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 25; 255; 0
+      Color: 255; 85; 255
       Enabled: true
       Head Diameter: 0.300000012
       Head Length: 0.200000003
@@ -222,7 +222,7 @@ Visualization Manager:
       Axes Length: 1
       Axes Radius: 0.100000001
       Class: rviz/Pose
-      Color: 0; 255; 0
+      Color: 255; 85; 255
       Enabled: true
       Head Length: 0.300000012
       Head Radius: 0.100000001
@@ -267,11 +267,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Scale: 128.522217
+      Scale: 111.169373
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: -0.804982543
-      Y: 0.018102847
+      X: -0.0560924746
+      Y: -0.891828895
     Saved: ~
 Window Geometry:
   Displays:

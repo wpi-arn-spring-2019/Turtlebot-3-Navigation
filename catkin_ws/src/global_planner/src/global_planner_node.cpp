@@ -11,18 +11,9 @@ int main(int argc, char **argv)
 
     Turtlebot::GlobalPlanner planner(nh, pnh);
 
-    ros::Rate r(5);
-
     while(ros::ok)
     {
-        ros::spinOnce();
-
-        if(planner.have_goal)
-        {
-            planner.planPath();
-        }
-
-        r.sleep();
+        ros::spin();
     }
 
     return 0;

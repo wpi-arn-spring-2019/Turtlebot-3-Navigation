@@ -26,10 +26,7 @@ class GlobalPlanner
 
 public:
     GlobalPlanner(ros::NodeHandle &nh, ros::NodeHandle &pnh);
-    ~GlobalPlanner();
-
-    void planPath();
-    bool have_goal = false;
+    ~GlobalPlanner();    
 
 private:
     //callbacks
@@ -45,6 +42,7 @@ private:
     //methods
 
     //expansion
+    void planPath();
     void initializePlanner();
     void clearFrontier();
     void openNode(const GraphNode &node);

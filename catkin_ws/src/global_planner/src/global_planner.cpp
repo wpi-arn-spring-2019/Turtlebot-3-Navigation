@@ -329,7 +329,6 @@ void GlobalPlanner::goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &m
 {
     if(m_have_costmap && m_have_pose)
     {
-        have_goal = true;
         m_goal_pose = *msg;
         geometry_msgs::PoseStamped goal_pose;
         goal_pose.pose.position.x = msg->x;
@@ -345,7 +344,6 @@ void GlobalPlanner::rvizGoalPoseCallback(const geometry_msgs::PoseStamped::Const
 {
     if(m_have_costmap && m_have_pose)
     {
-        have_goal = true;
         tf::Quaternion q;
         tf::quaternionMsgToTF(msg->pose.orientation, q);
         m_goal_pose.heading = tf::getYaw(q);
