@@ -66,14 +66,14 @@ const turtlebot_msgs::GoalPose LocalNavigator::calcNextWaypoint()
     tf::Pose pose = calcGoalPose(path_id_offset);
     while(checkForCollision(calcPointTransform(pose)))
     {
-        path_id_offset -= 1;
+        path_id_offset += 1;
         pose = calcGoalPose(path_id_offset);
     }
     turtlebot_msgs::GoalPose waypoint;
     waypoint.x = pose.getOrigin().getX();
     waypoint.y = pose.getOrigin().getY();
     waypoint.heading = tf::getYaw(pose.getRotation());
-    waypoint.speed = 0.1;
+    waypoint.speed = calcVelocityGoal(pose);
     waypoint.max_speed = m_max_speed;
     waypoint.max_accel = m_max_accel;
     return waypoint;
@@ -81,7 +81,7 @@ const turtlebot_msgs::GoalPose LocalNavigator::calcNextWaypoint()
 
 const tf::Pose LocalNavigator::calcGoalPose(const int &path_it_offset)
 {
-    int path_it = calcNearestPathPoint() - path_it_offset;
+    int path_it = calcNearestPathPoint() + path_it_offset;
     double x = m_path->poses[path_it].pose.position.x;
     double y = m_path->poses[path_it].pose.position.y;
     double dist_traveled = 0;
@@ -139,11 +139,12 @@ const double LocalNavigator::calcVelocityGoal(const tf::Pose &pose)
     const double &dy = m_path->poses.back().pose.position.y - pose.getOrigin().getY();
     const double &dist_to_goal = std::sqrt(std::pow(dx, 2) + std::pow(dy, 2));
     const double &time_to_goal = dist_to_goal / m_max_speed;
-    const double &time_to_decel = 2 * m_max_speed / m_max_accel;
+    const double &time_to_decel = m_max_speed / m_max_accel;
     if(time_to_decel > time_to_goal)
     {
         return 0;
     }
+    return m_max_speed;
 }
 
 const bool LocalNavigator::checkForCollision(const tf::Transform &transform) const

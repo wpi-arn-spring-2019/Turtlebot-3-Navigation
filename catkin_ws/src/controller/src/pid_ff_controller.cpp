@@ -38,7 +38,7 @@ const geometry_msgs::TwistStamped PIDFeedForwardController::getControls(const Tu
         derivative_w = 0;
     }
     m_integral_w += error_w * dt;
-    const double &control_w = desired_state.th_dot - m_kp_w * error_w - m_ki_w * m_integral_w - m_kd_w * derivative_w;
+    const double &control_w = desired_state.th_dot - m_kp_w * error_w - m_ki_w * m_integral_w + m_kd_w * derivative_w;
     control.twist.angular.z = control_w;
     const double &error_v = current_state.v - desired_state.v;
     double derivative_v = (current_state.v - m_prev_state->v) / dt;
@@ -47,7 +47,7 @@ const geometry_msgs::TwistStamped PIDFeedForwardController::getControls(const Tu
         derivative_v = 0;
     }
     m_integral_v += error_v * dt;
-    const double &control_v = desired_state.v - m_kp_v * error_v - m_ki_v * m_integral_v - m_kd_v * derivative_v;
+    const double &control_v = desired_state.v - m_kp_v * error_v - m_ki_v * m_integral_v + m_kd_v * derivative_v;
     control.twist.linear.x = control_v;
     m_prev_time = current_time;
     m_prev_state = new TurtlebotState(current_state);
