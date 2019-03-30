@@ -59,7 +59,7 @@ void GlobalPlanner::planPath()
         duration = ros::Time::now() - start_time;
         if(duration.toSec() * 1000 > m_timeout_ms)
         {            
-            ROS_WARN_STREAM("Failed to Find Path After " << m_timeout_ms / 1000 << " Seconds");
+            ROS_WARN_STREAM("Failed to Find Global Path After " << m_timeout_ms / 1000 << " Seconds. Resetting");
             return;
         }
         GraphNode current_node = m_frontier.top();
@@ -68,7 +68,7 @@ void GlobalPlanner::planPath()
             duration = ros::Time::now() - start_time;
             if(duration.toSec() * 1000 > m_timeout_ms)
             {
-                ROS_WARN_STREAM("Failed to Find Path After " << m_timeout_ms / 1000 << " Seconds");
+                ROS_WARN_STREAM("Failed to Find Global Path After " << m_timeout_ms / 1000 << " Seconds. Resetting");
                 return;
             }
             m_frontier.pop();
@@ -331,6 +331,12 @@ void GlobalPlanner::goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &m
     {
         have_goal = true;
         m_goal_pose = *msg;
+        geometry_msgs::PoseStamped goal_pose;
+        goal_pose.pose.position.x = msg->x;
+        goal_pose.pose.position.y = msg->y;
+        goal_pose.pose.position.z = 0;
+        goal_pose.pose.orientation = tf::createQuaternionMsgFromYaw(msg->heading);
+        m_goal_pub.publish(goal_pose);
         planPath();
     }
 }
@@ -344,8 +350,9 @@ void GlobalPlanner::rvizGoalPoseCallback(const geometry_msgs::PoseStamped::Const
         tf::quaternionMsgToTF(msg->pose.orientation, q);
         m_goal_pose.heading = tf::getYaw(q);
         m_goal_pose.x = msg->pose.position.x;
-        m_goal_pose.y = msg->pose.position.y;
+        m_goal_pose.y = msg->pose.position.y;        
         ROS_INFO_STREAM("Global Goal Pose Updated Manually");
+        m_goal_pub.publish(*msg);
         planPath();
     }
 }

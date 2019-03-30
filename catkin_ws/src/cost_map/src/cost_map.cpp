@@ -17,9 +17,6 @@ CostMap::CostMap(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 
 CostMap::~CostMap(){}
 
-
-
-
 void CostMap::currentScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg)
 {
     if(!m_have_scan && m_have_odom && m_have_map)

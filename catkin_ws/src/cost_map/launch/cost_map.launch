@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+    <node name="cost_map_node" pkg="cost_map" type="cost_map_node" output="screen"/>
+</launch>

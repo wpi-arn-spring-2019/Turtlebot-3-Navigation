@@ -26,13 +26,15 @@ private:
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
     void costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
 
-    const turtlebot_msgs::GoalPose calcNextWaypoint();
-    const tf::Pose calcIdealPose();
     void initializeNavigator(ros::NodeHandle &pnh);
     void setupCollision();
+    const turtlebot_msgs::GoalPose calcNextWaypoint();
+    const tf::Pose calcGoalPose(const int &path_it_offset);
+    const int calcNearestPathPoint();
+    const double calcVelocityGoal(const tf::Pose &pose);
     const bool checkForCollision(const tf::Transform &transform) const;
     const bool checkPointForCollision(const tf::Point &pt) const;
-    const tf::Transform calcPointTransform(const Point<double> &pt, const double &heading) const;
+    const tf::Transform calcPointTransform(const tf::Pose &pose) const;
     const int &calcGridLocation(const Point<double> &pt) const;
     void integratePoseToCurrentTime();
     void publishGoalPose(const turtlebot_msgs::GoalPose &pose);
@@ -52,8 +54,6 @@ private:
 
     ros::Time m_current_time;
     std::vector<tf::Point> m_collision_pts;
-
-    int m_path_it;
 
     double m_collision_buffer_distance;
     double m_waypoint_dist;

@@ -62,15 +62,87 @@ void LocalNavigator::setWaypoint()
 
 const turtlebot_msgs::GoalPose LocalNavigator::calcNextWaypoint()
 {
-
+    int path_id_offset = 0;
+    tf::Pose pose = calcGoalPose(path_id_offset);
+    while(checkForCollision(calcPointTransform(pose)))
+    {
+        path_id_offset -= 1;
+        pose = calcGoalPose(path_id_offset);
+    }
+    turtlebot_msgs::GoalPose waypoint;
+    waypoint.x = pose.getOrigin().getX();
+    waypoint.y = pose.getOrigin().getY();
+    waypoint.heading = tf::getYaw(pose.getRotation());
+    waypoint.speed = 0.1;
+    waypoint.max_speed = m_max_speed;
+    waypoint.max_accel = m_max_accel;
+    return waypoint;
 }
 
-const tf::Pose LocalNavigator::calcIdealPose()
+const tf::Pose LocalNavigator::calcGoalPose(const int &path_it_offset)
 {
+    int path_it = calcNearestPathPoint();
+    double x = m_path->poses[path_it].pose.position.x;
+    double y = m_path->poses[path_it].pose.position.y;
     double dist_traveled = 0;
-    while(dist_traveled < m_waypoint_dist || m_path_it <= m_path->poses.size())
+    while(dist_traveled < m_waypoint_dist && path_it < m_path->poses.size() - 1)
     {
-        m_path_it += 1;
+        x = m_path->poses[path_it].pose.position.x;
+        y = m_path->poses[path_it].pose.position.y;
+        const double &next_x = m_path->poses[path_it + 1].pose.position.x;
+        const double &next_y = m_path->poses[path_it + 1].pose.position.y;
+        const double &dx = next_x - x;
+        const double &dy = next_y - y;
+        dist_traveled += std::sqrt(std::pow(dx, 2) + std::pow(dy, 2));
+        path_it += 1;
+    }
+    double heading;
+    if(path_it < m_path->poses.size())
+    {
+        const double &next_x = m_path->poses[path_it + 1].pose.position.x;
+        const double &next_y = m_path->poses[path_it + 1].pose.position.y;
+        heading = std::atan2(next_y - y, next_x - x);
+    }
+    else
+    {
+        const double &prev_x = m_path->poses[path_it - 1].pose.position.x;
+        const double &prev_y = m_path->poses[path_it - 1].pose.position.y;
+        heading = std::atan2(y - prev_y, x - prev_x);
+    }
+    tf::Pose pose;
+    pose.setOrigin(tf::Vector3(x, y, 0));
+    pose.setRotation(tf::createQuaternionFromYaw(heading));
+    return pose;
+}
+
+const int LocalNavigator::calcNearestPathPoint()
+{
+    double shortest_dist = std::numeric_limits<double>::infinity();
+    int nearest_point_id;
+    for(int path_it = 0; path_it < m_path->poses.size(); path_it++)
+    {
+        const double &dx = m_path->poses[path_it].pose.position.x - m_pose_at_cur_time.pose.pose.position.x;
+        const double &dy = m_path->poses[path_it].pose.position.y - m_pose_at_cur_time.pose.pose.position.y;
+        const double &dist = std::sqrt(std::pow(dx, 2) + std::pow(dy, 2));
+        if(dist < shortest_dist)
+        {
+            shortest_dist = dist;
+            nearest_point_id = path_it;
+        }
+    }
+    return nearest_point_id;
+}
+
+const double LocalNavigator::calcVelocityGoal(const tf::Pose &pose)
+{
+    const double &dx = m_path->poses.back().pose.position.x - pose.getOrigin().getX();
+    const double &dy = m_path->poses.back().pose.position.y - pose.getOrigin().getY();
+    const double &dist_to_goal = std::sqrt(std::pow(dx, 2) + std::pow(dy, 2));
+    const double &time_to_goal = dist_to_goal / m_max_speed;
+    const double &time_to_decel = 2 * m_max_speed / m_max_accel;
+    if(time_to_decel > time_to_goal)
+    {
+        return 0;
     }
 }
 
@@ -92,11 +164,11 @@ const bool LocalNavigator::checkPointForCollision(const tf::Point &pt) const
     return int(m_map->data[calcGridLocation(Point<double>(pt.getX(), pt.getY()))]) == 100;
 }
 
-const tf::Transform LocalNavigator::calcPointTransform(const Point<double> &pt, const double &heading) const
+const tf::Transform LocalNavigator::calcPointTransform(const tf::Pose &pose) const
 {
     tf::Transform transform;
-    transform.setOrigin(tf::Vector3(pt.x, pt.y, 0));
-    transform.setRotation(tf::createQuaternionFromYaw(heading));
+    transform.setOrigin(tf::Vector3(pose.getOrigin().getX(), pose.getOrigin().getY(), 0));
+    transform.setRotation(pose.getRotation());
     return transform;
 }
 
@@ -156,7 +228,6 @@ void LocalNavigator::pathCallback(const nav_msgs::Path::ConstPtr &msg)
     {
         m_have_path = true;
     }
-    m_path_it = 0;
     m_path = msg;
 }
 

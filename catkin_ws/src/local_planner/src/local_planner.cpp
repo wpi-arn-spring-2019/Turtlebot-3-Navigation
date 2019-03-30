@@ -10,8 +10,8 @@ LocalPlanner::LocalPlanner(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose", 10, &LocalPlanner::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &LocalPlanner::odomCallback, this);
     m_trajectory_pub = nh.advertise<turtlebot_msgs::Trajectory>("/local_trajectory", 10);
-    m_path_pub = nh.advertise<nav_msgs::Path>("/planned_path", 10);
-    m_goal_pub = nh.advertise<geometry_msgs::PoseStamped>("/goal", 100);
+    m_path_pub = nh.advertise<nav_msgs::Path>("/local_path", 10);
+    m_goal_pub = nh.advertise<geometry_msgs::PoseStamped>("/local_goal", 100);
     getParams(pnh);
 }
 
@@ -67,7 +67,7 @@ void LocalPlanner::planPath()
             m_retry_it++;
             if(m_retry_it > m_num_retries - 1)
             {
-                ROS_WARN_STREAM("Failed to Find Path After " << m_num_retries << " Attempts. Resetting");
+                ROS_WARN_STREAM("Failed to Find Local Path After " << m_num_retries << " Attempts. Resetting");
                 m_retry_it = 0;
             }
             return;
@@ -81,7 +81,7 @@ void LocalPlanner::planPath()
                 m_retry_it++;
                 if(m_retry_it > m_num_retries - 1)
                 {
-                    ROS_WARN_STREAM("Failed to Find Path After " << m_num_retries << " Attempts. Resetting");
+                    ROS_WARN_STREAM("Failed to Find Local Path After " << m_num_retries << " Attempts. Resetting");
                     m_retry_it = 0;
                 }
                 return;
@@ -484,6 +484,13 @@ void LocalPlanner::goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &ms
     {
         have_goal = true;
         m_goal_pose = *msg;
+        geometry_msgs::PoseStamped goal_pose;
+        goal_pose.header.frame_id = "/map";
+        goal_pose.pose.position.x = msg->x;
+        goal_pose.pose.position.y = msg->y;
+        goal_pose.pose.position.z = 0;
+        goal_pose.pose.orientation = tf::createQuaternionMsgFromYaw(msg->heading);
+        m_goal_pub.publish(goal_pose);
         planPath();
     }
 }
