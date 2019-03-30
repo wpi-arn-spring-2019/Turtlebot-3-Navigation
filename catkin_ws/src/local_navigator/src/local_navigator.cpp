@@ -81,7 +81,7 @@ const turtlebot_msgs::GoalPose LocalNavigator::calcNextWaypoint()
 
 const tf::Pose LocalNavigator::calcGoalPose(const int &path_it_offset)
 {
-    int path_it = calcNearestPathPoint();
+    int path_it = calcNearestPathPoint() - path_it_offset;
     double x = m_path->poses[path_it].pose.position.x;
     double y = m_path->poses[path_it].pose.position.y;
     double dist_traveled = 0;
@@ -97,7 +97,7 @@ const tf::Pose LocalNavigator::calcGoalPose(const int &path_it_offset)
         path_it += 1;
     }
     double heading;
-    if(path_it < m_path->poses.size())
+    if(path_it < m_path->poses.size() - 1)
     {
         const double &next_x = m_path->poses[path_it + 1].pose.position.x;
         const double &next_y = m_path->poses[path_it + 1].pose.position.y;
@@ -105,9 +105,9 @@ const tf::Pose LocalNavigator::calcGoalPose(const int &path_it_offset)
     }
     else
     {
-        const double &prev_x = m_path->poses[path_it - 1].pose.position.x;
-        const double &prev_y = m_path->poses[path_it - 1].pose.position.y;
-        heading = std::atan2(y - prev_y, x - prev_x);
+        tf::Quaternion q;
+        tf::quaternionMsgToTF(m_path->poses.back().pose.orientation, q);
+        heading = tf::getYaw(q);
     }
     tf::Pose pose;
     pose.setOrigin(tf::Vector3(x, y, 0));

@@ -310,6 +310,7 @@ void GlobalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
         pose.pose.position.y = y;
         path.poses.push_back(pose);
     }
+    path.poses.back().pose.orientation = tf::createQuaternionMsgFromYaw(m_goal_pose.heading);
     m_path_pub.publish(path);
 }
 
