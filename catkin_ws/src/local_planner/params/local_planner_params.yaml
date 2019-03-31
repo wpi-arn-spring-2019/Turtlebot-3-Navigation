@@ -1,13 +1,13 @@
-collision_buffer_distance: 0.05
+collision_buffer_distance: 0.01
 time_step_ms: 500
 velocity_res: 0.05
-heading_res: 0.2
-max_yaw_rate: 2
+yaw_rate_res: 0.05
+max_yaw_rate: 0.3
 spline_order: 3
 goal_pos_tolerance: 0.1
 goal_heading_tolerance: 0.2
 goal_speed_tolerance: 0.05
-timeout_ms: 500
+timeout_ms: 1000
 num_retries: 5
 
 turtlebot_radius: 0.21

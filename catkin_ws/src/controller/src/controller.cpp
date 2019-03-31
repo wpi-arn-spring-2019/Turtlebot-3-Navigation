@@ -155,7 +155,8 @@ void Controller::control()
             const TurtlebotState &current_state = getCurrentState();
             const TurtlebotState &desired_state = getDesiredState(false);
             const TurtlebotState &next_desired_state = getDesiredState(true);
-            pubControls(m_smith_pred_pid_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control));
+            pubControls(m_pid_ff_cont->getControls(current_state, desired_state));
+            //pubControls(m_smith_pred_pid_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control));
             break;
         }
         m_prev_odom = m_odom;

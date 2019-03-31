@@ -59,7 +59,7 @@ private:
 
     //sampling
     const std::vector<double> calcPossibleVelocities(const GraphNode &current_node) const;
-    const std::vector<double> calcPossibleHeadings(const GraphNode &current_node) const;   
+    void calcPossibleYawRates();
     const tf::Transform calcNodeTransform(const Point<double> &pt, const double &heading) const;
 
     //cost functions
@@ -108,13 +108,14 @@ private:
 
 
     //c-space stuff and constricting parameters
+    std::vector<double> m_possible_yaw_rates;
     double m_local_costmap_res;
     int m_local_costmap_height;
     int m_local_costmap_width;
     double m_collision_buffer_distance;
     double m_time_step_ms;
     double m_velocity_res;
-    double m_heading_res;
+    double m_yaw_rate_res;
     double m_max_yaw_rate;
     double m_spline_order;
     double m_goal_pos_tolerance;

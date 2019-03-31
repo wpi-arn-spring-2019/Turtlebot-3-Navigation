@@ -25,12 +25,13 @@ struct GraphNode
 {
     GraphNode(){}
     GraphNode(const Point<double> &cp, const Point<double> &pp, const int &id_, const int &parent_id_,
-              const double &h, const double &v, const double &g_, const double &cost_) :
+              const double &h, const double &yr, const double &v, const double &g_, const double &cost_) :
         child_point(cp),
         parent_point(pp),
         id(id_),
         parent_id(parent_id_),
         heading(h),
+        yaw_rate(yr),
         velocity(v),
         g(g_),
         cost(cost_)
@@ -41,6 +42,7 @@ struct GraphNode
     int id;
     int parent_id;
     double heading;
+    double yaw_rate;
     double velocity;
     double g;
     double cost;

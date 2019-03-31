@@ -22,7 +22,7 @@ void LocalPlanner::getParams(ros::NodeHandle &pnh)
       pnh.getParam("collision_buffer_distance", m_collision_buffer_distance);
       pnh.getParam("time_step_ms", m_time_step_ms);
       pnh.getParam("velocity_res", m_velocity_res);
-      pnh.getParam("heading_res", m_heading_res);
+      pnh.getParam("yaw_rate_res", m_yaw_rate_res);
       pnh.getParam("max_yaw_rate", m_max_yaw_rate);
       pnh.getParam("spline_order", m_spline_order);
       pnh.getParam("goal_pos_tolerance", m_goal_pos_tolerance);
@@ -106,6 +106,7 @@ void LocalPlanner::initializePlanner()
 {
     clearFrontier();
     setupCollision();
+    calcPossibleYawRates();
 }
 
 void LocalPlanner::clearFrontier()
@@ -114,6 +115,7 @@ void LocalPlanner::clearFrontier()
     m_open_nodes.clear();    
     m_closed_nodes.clear();    
     m_nodes.clear();
+    m_possible_yaw_rates.clear();
     m_node_id = 0;
     double roll, pitch, yaw;
     tf::Quaternion q;
@@ -125,7 +127,7 @@ void LocalPlanner::clearFrontier()
     const double &vel = std::sqrt(std::pow(m_turtlebot_velocity.linear.x, 2) + std::pow(m_turtlebot_velocity.linear.y, 2));
     const GraphNode &node = GraphNode(Point<double>(m_pose->pose.pose.position.x, m_pose->pose.pose.position.y),
                                       Point<double>(m_pose->pose.pose.position.x, m_pose->pose.pose.position.y),
-                                      m_node_id, m_node_id, yaw, vel, 0.0, std::numeric_limits<double>::infinity());
+                                      m_node_id, m_node_id, yaw, 0, vel, 0.0, std::numeric_limits<double>::infinity());
     m_node_id++;
     m_frontier.push(node);
     openNode(node);
@@ -173,6 +175,7 @@ const bool LocalPlanner::checkForGoal(const GraphNode &node)
                         m_node_id,
                         node.id,
                         m_goal_pose.heading,
+                        0,
                         m_goal_pose.speed,
                         0, 0);
     m_frontier.push(goal_node);
@@ -206,23 +209,25 @@ void LocalPlanner::expandFrontier(const GraphNode &current_node)
 
 const std::vector<GraphNode> LocalPlanner::getNeighbors(const GraphNode &current_node)
 {
-    std::vector<GraphNode> neighbors = {};
+    std::vector<GraphNode> neighbors;
     const Spline1d &spline = calcSpline(current_node.child_point, current_node.heading);
     const std::vector<double> &possible_velocities = calcPossibleVelocities(current_node);
-    const std::vector<double> &possible_headings = calcPossibleHeadings(current_node);    
     for(const auto &velocity : possible_velocities)
     {
-        for(const auto &heading : possible_headings)
+        for(const auto &yaw_rate : m_possible_yaw_rates)
         {
-            const double &acc = (velocity - current_node.velocity) / m_time_step_ms / 1000;
-            const double &x = current_node.child_point.x + (current_node.velocity * m_time_step_ms / 1000 +
-                                                            acc * std::pow(m_time_step_ms / 1000, 2) /  2) * cos(heading);
-            const double &y = current_node.child_point.y + (current_node.velocity * m_time_step_ms / 1000 +
-                                                            acc * std::pow(m_time_step_ms / 1000, 2) /  2) * sin(heading);
+            double r = velocity / yaw_rate;
+            if(std::isnan(r) || std::isinf(r))
+            {
+                r = 0;
+            }
+            const double &x = current_node.child_point.x - r * sin(current_node.heading) + r * sin(current_node.heading + yaw_rate * m_time_step_ms / 1000);
+            const double &y = current_node.child_point.y + r * cos(current_node.heading) - r * cos(current_node.heading + yaw_rate * m_time_step_ms / 1000);
+            const double &heading = current_node.heading + yaw_rate * m_time_step_ms / 1000;
             const Point<double> new_pt(x, y);           
             const double &g = calcG(new_pt, current_node);
             const double &h = calcH(new_pt, current_node.child_point, heading, velocity, spline);
-            GraphNode new_node(new_pt, current_node.child_point, m_node_id, current_node.id, heading, velocity, g, g + h);
+            GraphNode new_node(new_pt, current_node.child_point, m_node_id, current_node.id, heading, yaw_rate, velocity, g, g + h);
             neighbors.push_back(new_node);
             m_nodes.insert(std::make_pair(m_node_id, new_node));
             m_node_id++;
@@ -233,7 +238,7 @@ const std::vector<GraphNode> LocalPlanner::getNeighbors(const GraphNode &current
 
 const std::vector<double> LocalPlanner::calcPossibleVelocities(const GraphNode &current_node) const
 {
-    std::vector<double> possible_velocities = {};
+    std::vector<double> possible_velocities;
     const double &current_velocity = current_node.velocity;
     const double &max_accel = m_goal_pose.max_accel;
     const double &max_velocity  = m_goal_pose.max_speed;
@@ -244,35 +249,28 @@ const std::vector<double> LocalPlanner::calcPossibleVelocities(const GraphNode &
     const int &num_possible_vels = possible_vel_range / m_velocity_res;
     for(int i = 0; i < num_possible_vels; i++)
     {
-        const double &velocity = min_possible_vel + i * m_velocity_res;
-        if(velocity == 0 && m_goal_pose.speed != 0)
+        double velocity = min_possible_vel + i * m_velocity_res;
+        if(velocity > max_velocity)
         {
-            continue;
+            velocity = max_velocity;
         }
-        if(velocity > max_velocity || velocity < 0)
+        else if(velocity < 0)
         {
-            continue;
+            velocity = 0;
         }
         possible_velocities.push_back(velocity);
     }
     return possible_velocities;
 }
 
-const std::vector<double> LocalPlanner::calcPossibleHeadings(const GraphNode &current_node) const
+void LocalPlanner::calcPossibleYawRates()
 {
-    std::vector<double> possible_yaws = {};
-    const double &time_step = m_time_step_ms / 1000;
-    const double &current_heading = current_node.heading;
-    const double &max_heading = current_heading + m_max_yaw_rate * time_step;
-    const double &min_heading = current_heading - m_max_yaw_rate * time_step;
-    const double &heading_range = max_heading - min_heading;
-    const double &num_possible_headings = heading_range / m_heading_res;
+    const int &num_possible_headings = 2 * m_max_yaw_rate / m_yaw_rate_res;
     for(int i = 0; i < num_possible_headings; i++)
-    {
-        const double &heading = min_heading + i * m_heading_res;
-        possible_yaws.push_back(heading);
-    }
-    return possible_yaws;
+    {        
+        const double &yaw_rate = -m_max_yaw_rate + i * m_yaw_rate_res;
+        m_possible_yaw_rates.push_back(yaw_rate);
+    }    
 }
 
 const tf::Transform LocalPlanner::calcNodeTransform(const Point<double> &pt, const double &heading) const
@@ -433,22 +431,12 @@ void LocalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
     trajectory.max_accel = m_goal_pose.max_accel;
     trajectory.max_speed = m_goal_pose.max_speed;
     path.header.frame_id = "/map";
-    double time_from_start = 0;
     for(int traj_it = 0; traj_it < traj.size(); traj_it++)
     {
         const double &x = traj[traj_it].child_point.x;
         const double &y = traj[traj_it].child_point.y;
         const double &heading = traj[traj_it].heading;
-        double yaw_rate;
-        if(traj_it < traj.size() - 1)
-        {
-            const double &next_heading = traj[traj_it + 1].heading;
-            yaw_rate = (next_heading - heading) / (m_time_step_ms / 1000);
-        }
-        else
-        {
-            yaw_rate = 0;
-        }
+        const double &yaw_rate = traj[traj_it].yaw_rate;
         const double &velocity = traj[traj_it].velocity;
         trajectory.x_values.push_back(x);
         trajectory.y_values.push_back(y);
@@ -460,7 +448,6 @@ void LocalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
         pose.pose.position.x = x;
         pose.pose.position.y = y;
         path.poses.push_back(pose);
-        time_from_start += m_time_step_ms / 1000;
     }
     m_trajectory_pub.publish(trajectory);
     m_path_pub.publish(path);
