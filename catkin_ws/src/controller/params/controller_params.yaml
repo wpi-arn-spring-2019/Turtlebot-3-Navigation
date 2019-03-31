@@ -25,6 +25,6 @@ kd_v_pd_ff: 0.1
 kp_w_pid_ff: 0.05
 ki_w_pid_ff: 0.001
 kd_w_pid_ff: 0.0025
-kp_v_pid_ff: 0.25
-ki_v_pid_ff: 0.01
-kd_v_pid_ff: 0.25
+kp_v_pid_ff: 0.0025
+ki_v_pid_ff: 0.0001
+kd_v_pid_ff: 0.0025
