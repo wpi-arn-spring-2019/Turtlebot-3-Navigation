@@ -175,14 +175,13 @@ void Localization::calcParticleWeights(std::deque<Particle> &particles)
 const double Localization::calcDistanceScore(const tf::Point &particle_pt, const tf::Point &sensor_pt)
 {
     const double &dx = fabs(particle_pt.getX() - sensor_pt.getX());
-    const double &dy = fabs(particle_pt.getY() - sensor_pt.getY());
-    const double &dz = fabs(particle_pt.getZ() - sensor_pt.getZ());
-    double dist = std::sqrt(std::pow(dx, 2) + std::pow(dy, 2) + std::pow(dz, 2));
-    if(dist <= 0.001)
+    const double &dy = fabs(particle_pt.getY() - sensor_pt.getY());    
+    double dist = std::sqrt(std::pow(dx, 2) + std::pow(dy, 2));
+    if(dist <= 0.0001)
     {
-        dist = 0.001;
+        dist = 0.0001;
     }
-    return 1.0f / dist;
+    return 10.0f / dist;
 }
 
 const double Localization::calcRotationScore(const tf::Quaternion &particle_q, const tf::Quaternion &sensor_q)
