@@ -8,7 +8,6 @@
 #include <nav_msgs/Odometry.h>
 #include <cmath>
 
-
 namespace Turtlebot
 {
     class CostMap
@@ -17,7 +16,7 @@ namespace Turtlebot
         CostMap(ros::NodeHandle &nh, ros::NodeHandle &pnh);
         ~CostMap();
     private:
-        sensor_msgs::LaserScan current_scan;
+//        sensor_msgs::LaserScan m_scan;
         sensor_msgs::LaserScan referance_scan;
         geometry_msgs::PoseWithCovarianceStamped current_pose;
         nav_msgs::OccupancyGrid cost_map;
@@ -25,13 +24,20 @@ namespace Turtlebot
         int once_flag = 1;
         bool cost_map_available = 0;
         bool scan_available = 0;
+        float current_cartesian_x;
+        float current_cartesian_y;
+        int current_grid_x;
+        int current_grid_y;
+        int map_index_num;
 
         ros::Subscriber current_scan_sub;
         ros::Subscriber current_pose_sub;
         ros::Subscriber map_sub;
+        ros::Subscriber m_odom_sub ;
+
         ros::Publisher cost_map_pub;
         FakeScan fake_scan;
-        float threshold;
+        float threshold = 5;
 
         void currentScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg);
         void currentPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);

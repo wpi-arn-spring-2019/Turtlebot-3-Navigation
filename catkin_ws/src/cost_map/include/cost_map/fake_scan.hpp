@@ -27,9 +27,6 @@ private:
     void writeScan(const double &dist, sensor_msgs::LaserScan &scan);
     std::vector<std::vector<int>> m_matrix_map;
 
-
-
-
 };
 
 }
