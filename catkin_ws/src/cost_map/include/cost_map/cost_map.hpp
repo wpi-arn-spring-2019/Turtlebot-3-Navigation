@@ -47,6 +47,8 @@ namespace Turtlebot
         void integratePoseToCurrentTime(tf::Pose &pose);
         void integrateOdomToScanTime();
         void laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg);
+        void clearCostMap();
+
 
 
         FakeScan *m_fake_scan;

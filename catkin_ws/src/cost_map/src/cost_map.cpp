@@ -77,7 +77,6 @@ void CostMap::currentScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg)
         m_odom_at_last_scan = *m_odom;
     }
      m_scan = msg;
-
     if(m_have_odom)
     {
         integrateOdomToScanTime();
@@ -138,23 +137,59 @@ void CostMap::generateCostMap()
  ROS_INFO("new current pose 4444444444444 ");
     for (int i=0 ; i<= m_scan->ranges.size(); i++)
     {
+
+//      clearCostMap();
+        ///////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
+        //modify this quaternion
+
+        tf::Quaternion q;
+        q.setW(current_pose.pose.pose.orientation.w);
+        q.setX(current_pose.pose.pose.orientation.x);
+        q.setY(current_pose.pose.pose.orientation.y);
+        q.setZ(current_pose.pose.pose.orientation.z);
+        double roll, pitch, yaw;
+        tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+        double ray_dist = 0;   // find the minimum ray_dist and put it instead of zero
+
+        /////////////////////////////////////////////////////////////////////////////////////////
+
+        double angle = yaw + (i*m_scan->angle_increment);
+
+//        const double &x = (current_grid_x+200) + ray_dist * cos(angle);
+//        const double &y = (current_grid_y+200) + ray_dist * sin(angle);
+
+        ROS_INFO("start throwing laser range %f",m_scan->ranges[i]);
+
+        while(ray_dist <= m_scan->ranges[i] && ray_dist <= m_scan->range_max)
+        {
+
+            int pix_x = (current_grid_x+200) + int((ray_dist * cos(angle))/0.05);
+            int pix_y = (current_grid_y+200) + int((ray_dist * sin(angle))/0.05);
+//            ROS_INFO("pix_x pix_y costMapValue ray Distance %d %d %f %f",pix_x,pix_y,cost_map.data[(pix_y*cost_map.info.width + pix_x)],ray_dist);
+            cost_map.data[(pix_y*cost_map.info.width + pix_x)] = 0;
+            ray_dist += 0.001;
+            cost_map_pub.publish(cost_map);
+        }
+
+   ////////////////////////////////////////////
         if(!(m_scan->ranges[i]>m_scan->range_max) && !(m_scan->ranges[i]<m_scan->range_min))
         {
       if ((referance_scan.ranges[i] - m_scan->ranges[i]) > 0.5)
       {
-            tf::Quaternion q;
-            q.setW(current_pose.pose.pose.orientation.w);
-            q.setX(current_pose.pose.pose.orientation.x);
-            q.setY(current_pose.pose.pose.orientation.y);
-            q.setZ(current_pose.pose.pose.orientation.z);
-            double roll, pitch, yaw;
+//            tf::Quaternion q;
+//            q.setW(current_pose.pose.pose.orientation.w);
+//            q.setX(current_pose.pose.pose.orientation.x);
+//            q.setY(current_pose.pose.pose.orientation.y);
+//            q.setZ(current_pose.pose.pose.orientation.z);
+//            double roll, pitch, yaw;
 
-            tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-            float angle = yaw + (i*m_scan->angle_increment);
+//            tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+             angle = yaw + (i*m_scan->angle_increment);
 
 
-            ROS_INFO("current grid x %d add %d",current_grid_x+200,  int((m_scan->ranges[i] * cos(angle))/0.05));
-            ROS_INFO("current grid y %d add %d",current_grid_y+200,  int((m_scan->ranges[i] * sin(angle))/0.05));
+//            ROS_INFO("current grid x %d add %d",current_grid_x+200,  int((m_scan->ranges[i] * cos(angle))/0.05));
+//            ROS_INFO("current grid y %d add %d",current_grid_y+200,  int((m_scan->ranges[i] * sin(angle))/0.05));
 
             int x = (current_grid_x+200) + int((m_scan->ranges[i] * cos(angle))/0.05);
             int y = (current_grid_y+200) + int((m_scan->ranges[i] * sin(angle))/0.05);
@@ -172,7 +207,12 @@ void CostMap::generateCostMap()
 
 }
 
+void CostMap::clearCostMap()
+{
 
+
+
+}
 
 
 void CostMap::integrateOdomToScanTime()
