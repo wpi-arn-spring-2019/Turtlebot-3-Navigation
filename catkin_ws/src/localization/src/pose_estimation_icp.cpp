@@ -21,13 +21,18 @@ const PointCloud::Ptr PoseEstimationICP::convertToPCL(const sensor_msgs::LaserSc
 
 const Eigen::Matrix4f PoseEstimationICP::calcTransformICP(const PointCloud::Ptr &source_cloud, const PointCloud::Ptr &target_cloud)
 {
-    WarpPointRigid3D::Ptr wpr3d(new WarpPointRigid3D);
-    TransformationEstimationLM::Ptr trans_est(new TransformationEstimationLM);
-    trans_est->setWarpFunction(wpr3d);
+    CorrespondenceEstimation::Ptr corr_est(new CorrespondenceEstimation);
+    corr_est->setInputSource(source_cloud);
+    corr_est->setInputTarget(target_cloud);
+    pcl::Correspondences corr;
+    corr_est->determineCorrespondences(corr);
+    TransformationEstimation2D::Ptr trans_est(new TransformationEstimation2D);
+    Eigen::Matrix4f est_mat;
+    trans_est->estimateRigidTransformation(*source_cloud, *target_cloud, corr, est_mat);
     pcl::IterativeClosestPoint<Point, Point> icp;
     icp.setTransformationEstimation(trans_est);
-    icp.setInputSource(target_cloud);
-    icp.setInputTarget(source_cloud);
+    icp.setInputSource(source_cloud);
+    icp.setInputTarget(target_cloud);
     PointCloud out_cloud;
     icp.align(out_cloud);
     return icp.getFinalTransformation();

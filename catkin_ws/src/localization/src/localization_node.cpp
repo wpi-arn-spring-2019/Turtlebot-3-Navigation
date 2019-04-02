@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 
     ros::NodeHandle pnh("~");
 
-    ros::Rate rate(7.5);
+    ros::Rate rate(10);
 
     Turtlebot::Localization loc(nh, pnh);
 

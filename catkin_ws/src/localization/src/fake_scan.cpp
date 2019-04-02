@@ -7,12 +7,10 @@ const sensor_msgs::LaserScan FakeScan::getFakeScan(const geometry_msgs::PoseWith
 {
     sensor_msgs::LaserScan scan = m_scan;
     scan.ranges.clear();
-    for(float inc = m_scan.angle_min; inc < m_scan.angle_max; inc+= m_scan.angle_increment)
+    for(float inc = m_scan.angle_min; inc <= m_scan.angle_max; inc += m_scan.angle_increment)
     {
-
         const double &dist = laserThrower(pose, inc);
         writeScan(dist, scan);
-
     }
     scan.header.stamp = ros::Time::now();
     return scan;

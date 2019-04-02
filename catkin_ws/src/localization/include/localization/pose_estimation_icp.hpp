@@ -5,17 +5,17 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
+#include <pcl/registration/correspondence_estimation.h>
 #include <pcl/registration/icp.h>
-#include <pcl/registration/transformation_estimation_lm.h>
-#include <pcl/registration/warp_point_rigid_3d.h>
+#include <pcl/registration/transformation_estimation_2D.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <tf/tf.h>
 
 typedef pcl::PointXYZ Point;
 typedef pcl::PointCloud<Point> PointCloud;
-typedef pcl::registration::WarpPointRigid3D<Point, Point> WarpPointRigid3D;
-typedef pcl::registration::TransformationEstimationLM<Point, Point> TransformationEstimationLM;
+typedef pcl::registration::CorrespondenceEstimation<Point, Point> CorrespondenceEstimation;
+typedef pcl::registration::TransformationEstimation2D<Point, Point> TransformationEstimation2D;
 
 namespace Turtlebot
 {
