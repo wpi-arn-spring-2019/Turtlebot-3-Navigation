@@ -154,17 +154,8 @@ void Localization::calcParticleWeights(std::deque<Particle> &particles)
     prev_pose.setOrigin(tf::Vector3(m_prev_pose.pose.pose.position.x, m_prev_pose.pose.pose.position.y, 0));
     tf::Quaternion q;
     tf::quaternionMsgToTF(m_prev_pose.pose.pose.orientation, q);
-    prev_pose.setRotation(q);
-    tf::Pose sensor_dpose =  m_pose_icp->getTransform(fake_scan, *m_scan);
-    const double &dp = std::sqrt(std::pow(sensor_dpose.getOrigin().getX(), 2) + std::pow(sensor_dpose.getOrigin().getY(), 2));
-    if(dp > 0.2)
-    {
-        const double &dx = m_odom_at_scan.pose.pose.position.x; - m_prev_odom->pose.pose.position.x;
-        const double &dy = m_odom_at_scan.pose.pose.position.y; - m_prev_odom->pose.pose.position.y;
-        ROS_INFO_STREAM(dx <<" " << dy);
-        sensor_dpose.setOrigin(tf::Vector3(dx, dy, 0));
-    }
-    tf::Pose sensor_pose_estimate = prev_pose * sensor_dpose;
+    prev_pose.setRotation(q);    
+    tf::Pose sensor_pose_estimate = prev_pose * m_pose_icp->getTransform(fake_scan, *m_scan);
     sensor_pose_estimate.setOrigin(tf::Vector3(sensor_pose_estimate.getOrigin().getX() + m_gen_sens_x->operator ()(),
                                                sensor_pose_estimate.getOrigin().getY() + m_gen_sens_y->operator ()(),
                                                0));
