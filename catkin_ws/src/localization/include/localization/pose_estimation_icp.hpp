@@ -8,6 +8,7 @@
 #include <pcl/registration/correspondence_estimation.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/transformation_estimation_2D.h>
+#include <pcl/visualization/pcl_visualizer.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <tf/tf.h>
@@ -34,8 +35,6 @@ private:
     const tf::Pose convertMatrixToPose(const Eigen::Matrix4f &mat);
 
     laser_geometry::LaserProjection m_projector;
-
-
 };
 
 }

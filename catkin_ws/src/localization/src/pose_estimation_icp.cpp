@@ -27,15 +27,15 @@ const Eigen::Matrix4f PoseEstimationICP::calcTransformICP(const PointCloud::Ptr 
     pcl::Correspondences corr;
     corr_est->determineCorrespondences(corr);
     TransformationEstimation2D::Ptr trans_est(new TransformationEstimation2D);
-    Eigen::Matrix4f est_mat;
+    Eigen::Matrix4f est_mat;    
     trans_est->estimateRigidTransformation(*source_cloud, *target_cloud, corr, est_mat);
     pcl::IterativeClosestPoint<Point, Point> icp;
-    icp.setTransformationEstimation(trans_est);
+    icp.setTransformationEstimation(trans_est);    
     icp.setInputSource(source_cloud);
     icp.setInputTarget(target_cloud);
-    icp.setMaximumIterations(20);
-    icp.setMaxCorrespondenceDistance(0.1);
-    icp.align(*target_cloud);
+    icp.setMaximumIterations(50);
+    PointCloud out_cloud;
+    icp.align(out_cloud);
     return icp.getFinalTransformation();
 }
 

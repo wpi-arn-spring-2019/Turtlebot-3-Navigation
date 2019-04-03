@@ -155,7 +155,16 @@ void Localization::calcParticleWeights(std::deque<Particle> &particles)
     tf::Quaternion q;
     tf::quaternionMsgToTF(m_prev_pose.pose.pose.orientation, q);
     prev_pose.setRotation(q);
-    tf::Pose sensor_pose_estimate = prev_pose * m_pose_icp->getTransform(fake_scan, *m_scan);
+    tf::Pose sensor_dpose =  m_pose_icp->getTransform(fake_scan, *m_scan);
+    const double &dp = std::sqrt(std::pow(sensor_dpose.getOrigin().getX(), 2) + std::pow(sensor_dpose.getOrigin().getY(), 2));
+    if(dp > 0.2)
+    {
+        const double &dx = m_odom_at_scan.pose.pose.position.x; - m_prev_odom->pose.pose.position.x;
+        const double &dy = m_odom_at_scan.pose.pose.position.y; - m_prev_odom->pose.pose.position.y;
+        ROS_INFO_STREAM(dx <<" " << dy);
+        sensor_dpose.setOrigin(tf::Vector3(dx, dy, 0));
+    }
+    tf::Pose sensor_pose_estimate = prev_pose * sensor_dpose;
     sensor_pose_estimate.setOrigin(tf::Vector3(sensor_pose_estimate.getOrigin().getX() + m_gen_sens_x->operator ()(),
                                                sensor_pose_estimate.getOrigin().getY() + m_gen_sens_y->operator ()(),
                                                0));
@@ -177,11 +186,11 @@ const double Localization::calcDistanceScore(const tf::Point &particle_pt, const
     const double &dx = fabs(particle_pt.getX() - sensor_pt.getX());
     const double &dy = fabs(particle_pt.getY() - sensor_pt.getY());    
     double dist = std::sqrt(std::pow(dx, 2) + std::pow(dy, 2));
-    if(dist <= 0.0001)
+    if(dist <= 0.001)
     {
-        dist = 0.0001;
+        dist = 0.001;
     }
-    return 10.0f / dist;
+    return 1.0f / dist;
 }
 
 const double Localization::calcRotationScore(const tf::Quaternion &particle_q, const tf::Quaternion &sensor_q)
@@ -404,8 +413,8 @@ void Localization::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
 {
     if(!m_have_odom)
     {
-        m_have_odom = true;
-        m_prev_odom = msg;
+        m_odom = msg;
+        m_have_odom = true;        
         m_rng.seed(ros::Time::now().toSec());
         GaussianDistribution sens_x(0.0, std::sqrt(m_sensor_var_x));
         GaussianDistribution sens_y(0.0, std::sqrt(m_sensor_var_y));
@@ -414,6 +423,7 @@ void Localization::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
         m_gen_sens_y = new GaussianGenerator(m_rng, sens_y);
         m_gen_sens_yaw = new GaussianGenerator(m_rng, sens_yaw);
     }
+    m_prev_odom = m_odom;
     const double &cov_trans = sqrt(msg->pose.covariance[0] + msg->pose.covariance[7]);
     const double &cov_rot = std::sqrt(msg->pose.covariance[35]);
     const double &cov_sigma_rot1 = cov_rot + cov_trans;
