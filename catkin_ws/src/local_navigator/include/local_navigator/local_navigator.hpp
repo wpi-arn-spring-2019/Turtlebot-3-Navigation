@@ -5,6 +5,7 @@
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <point.hpp>
+#include <std_msgs/Bool.h>
 #include <tf/tf.h>
 #include <tf/transform_datatypes.h>
 #include <turtlebot_msgs/GoalPose.h>
@@ -28,6 +29,7 @@ private:
 
     void initializeNavigator(ros::NodeHandle &pnh);
     void setupCollision();
+    const bool checkForGoal();
     const turtlebot_msgs::GoalPose calcNextWaypoint();
     const tf::Pose calcGoalPose(const int &path_it_offset);
     const int calcNearestPathPoint();
@@ -36,6 +38,7 @@ private:
     const bool checkPointForCollision(const tf::Point &pt) const;
     const tf::Transform calcPointTransform(const tf::Pose &pose) const;
     const int &calcGridLocation(const Point<double> &pt) const;
+    void integrateOdomToCurrentTime();
     void integratePoseToCurrentTime();
     void publishGoalPose(const turtlebot_msgs::GoalPose &pose);
 
@@ -44,11 +47,13 @@ private:
     ros::Subscriber m_odom_sub;
     ros::Subscriber m_map_sub;
     ros::Publisher m_goal_pose_pub;
+    ros::Publisher m_goal_reached_pub;
 
     nav_msgs::Path::ConstPtr m_path;
     geometry_msgs::PoseWithCovarianceStamped::ConstPtr m_pose;
     geometry_msgs::PoseWithCovarianceStamped m_pose_at_cur_time;
     nav_msgs::Odometry::ConstPtr m_odom;
+    nav_msgs::Odometry m_odom_at_cur_time;
     nav_msgs::Odometry::ConstPtr m_prev_odom;
     nav_msgs::OccupancyGrid::ConstPtr m_map;
 
@@ -60,6 +65,9 @@ private:
     double m_corridor_radius;
     double m_max_speed;
     double m_max_accel;
+    double m_goal_pos_tol;
+    double m_goal_ang_tol;
+    double m_goal_vel_tol;
     double m_radius;
     double m_angular_col_res;
     double m_radial_col_res;
