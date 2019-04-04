@@ -63,10 +63,11 @@ void LocalNavigator::setWaypoint()
         integratePoseToCurrentTime();
         if(checkForGoal())
         {
-
+            publishGoalStatus(true);
             return;
         }
         publishGoalPose(calcNextWaypoint());
+        publishGoalStatus(false);
     }
 }
 
@@ -283,6 +284,13 @@ void LocalNavigator::integratePoseToCurrentTime()
 void LocalNavigator::publishGoalPose(const turtlebot_msgs::GoalPose &pose)
 {
     m_goal_pose_pub.publish(pose);
+}
+
+void LocalNavigator::publishGoalStatus(const bool &reached)
+{
+    std_msgs::Bool status;
+    status.data = reached;
+    m_goal_reached_pub.publish(status);
 }
 
 void LocalNavigator::pathCallback(const nav_msgs::Path::ConstPtr &msg)

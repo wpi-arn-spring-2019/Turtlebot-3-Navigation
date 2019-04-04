@@ -41,6 +41,7 @@ private:
     void integrateOdomToCurrentTime();
     void integratePoseToCurrentTime();
     void publishGoalPose(const turtlebot_msgs::GoalPose &pose);
+    void publishGoalStatus(const bool &reached);
 
     ros::Subscriber m_path_sub;
     ros::Subscriber m_pose_sub;
