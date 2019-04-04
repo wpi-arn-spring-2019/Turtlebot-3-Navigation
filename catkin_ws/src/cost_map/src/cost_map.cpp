@@ -76,7 +76,8 @@ void CostMap::currentScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg)
 //        ROS_INFO("first scan is gone to m_prev scan");
         m_odom_at_last_scan = *m_odom;
     }
-     m_scan = msg;
+
+    m_scan = msg;
     if(m_have_odom)
     {
         integrateOdomToScanTime();
@@ -96,21 +97,21 @@ void CostMap::currentPoseCallback(const geometry_msgs::PoseWithCovarianceStamped
     current_grid_x = int(current_pose.pose.pose.position.x/0.05);
     current_grid_y = int(current_pose.pose.pose.position.y/0.05);
     map_index_num = ((current_grid_x+200) *cost_map.info.width) +(current_grid_y+200);
-//   tf::Quaternion q;
-//   q.setW(current_pose.pose.pose.orientation.w);
-//   q.setX(current_pose.pose.pose.orientation.x);
-//   q.setY(current_pose.pose.pose.orientation.y);
-//   q.setZ(current_pose.pose.pose.orientation.z);
-//   double actual_roll, actual_pitch, actual_yaw;
-//   tf::Matrix3x3(q).getRPY(actual_roll, actual_pitch, actual_yaw);
-//   tf::Pose current_tf_pose;
-//   current_tf_pose.setOrigin(tf::Vector3(current_pose.pose.pose.position.x, current_pose.pose.pose.position.y, 0));
-//   current_tf_pose.setRotation(tf::createQuaternionFromYaw(actual_yaw));
+   tf::Quaternion q;
+   q.setW(current_pose.pose.pose.orientation.w);
+   q.setX(current_pose.pose.pose.orientation.x);
+   q.setY(current_pose.pose.pose.orientation.y);
+   q.setZ(current_pose.pose.pose.orientation.z);
+   double actual_roll, actual_pitch, actual_yaw;
+   tf::Matrix3x3(q).getRPY(actual_roll, actual_pitch, actual_yaw);
+   tf::Pose current_tf_pose;
+   current_tf_pose.setOrigin(tf::Vector3(current_pose.pose.pose.position.x, current_pose.pose.pose.position.y, 0));
+   current_tf_pose.setRotation(tf::createQuaternionFromYaw(actual_yaw));
 
-//   ROS_INFO("current pose before 1 %d %d ",current_pose.pose.pose.position.x,current_pose.pose.pose.position.y);
-//   integratePoseToCurrentTime(current_tf_pose);
+   ROS_INFO("current pose before 1 %d %d ",int(current_pose.pose.pose.position.x),int(current_pose.pose.pose.position.y));
+   integratePoseToCurrentTime(current_tf_pose);
 
-     referance_scan = m_fake_scan->getFakeScan(current_pose);
+   referance_scan = m_fake_scan->getFakeScan(current_pose);
 //  for (int i=0 ; i<= referance_scan.ranges.size(); i++)
 //  {
 //    ROS_INFO("ranges position %f",referance_scan.ranges[i]);
@@ -122,20 +123,24 @@ void CostMap::currentPoseCallback(const geometry_msgs::PoseWithCovarianceStamped
 //      cost_map.data[int((152)*cost_map.info.width + (192))] = 100;
 //      cost_map.data[int((152)*cost_map.info.width + (192))] = 100;
 //   cost_map_pub.publish(cost_map);
-
+     cost_map_pub.publish(cost_map);
     ROS_INFO("cost map value %d",cost_map.data[map_index_num]);
     if(cost_map.data[map_index_num]!= -1)
     {
-      ROS_INFO("cost map pixel value %d",cost_map.data[map_index_num]);
+//      ROS_INFO("cost map pixel value %d",cost_map.data[map_index_num]);
       generateCostMap();
     }
+
+    m_prev_scan = *m_scan;
+    m_prev_odom = m_odom;
+
 
 }
 
 void CostMap::generateCostMap()
 {
  ROS_INFO("new current pose 4444444444444 ");
-    for (int i=0 ; i<= m_scan->ranges.size(); i++)
+    for (int i=0 ; i< m_scan->ranges.size(); i++)
     {
 
 //      clearCostMap();
@@ -152,29 +157,34 @@ void CostMap::generateCostMap()
         tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
         double ray_dist = 0;   // find the minimum ray_dist and put it instead of zero
 
-        /////////////////////////////////////////////////////////////////////////////////////////
+        double angle = yaw + ((i)*m_scan->angle_increment);
 
-        double angle = yaw + (i*m_scan->angle_increment);
+//       ROS_INFO("start throwing laser range %f",m_scan->ranges[i]);
+//        cost_map_pub.publish(cost_map);
 
-//        const double &x = (current_grid_x+200) + ray_dist * cos(angle);
-//        const double &y = (current_grid_y+200) + ray_dist * sin(angle);
-
-        ROS_INFO("start throwing laser range %f",m_scan->ranges[i]);
-
-        while(ray_dist <= m_scan->ranges[i] && ray_dist <= m_scan->range_max)
+        while(ray_dist < m_scan->ranges[i]-0.05 && ray_dist < m_scan->range_max-0.05)
         {
 
             int pix_x = (current_grid_x+200) + int((ray_dist * cos(angle))/0.05);
             int pix_y = (current_grid_y+200) + int((ray_dist * sin(angle))/0.05);
-//            ROS_INFO("pix_x pix_y costMapValue ray Distance %d %d %f %f",pix_x,pix_y,cost_map.data[(pix_y*cost_map.info.width + pix_x)],ray_dist);
+//ROS_INFO("pix_x pix_y m_scan Range ray_Distance %d %d %f %f ",pix_x,pix_y,m_scan->ranges[i],ray_dist);
+
+            if((m_map->data[(pix_y*cost_map.info.width + pix_x)])!= 100)
+            {
             cost_map.data[(pix_y*cost_map.info.width + pix_x)] = 0;
-            ray_dist += 0.001;
+            }
+
+            ray_dist += 0.01;
             cost_map_pub.publish(cost_map);
+//                 r.sleep();
+
         }
 
    ////////////////////////////////////////////
         if(!(m_scan->ranges[i]>m_scan->range_max) && !(m_scan->ranges[i]<m_scan->range_min))
         {
+
+
       if ((referance_scan.ranges[i] - m_scan->ranges[i]) > 0.5)
       {
 //            tf::Quaternion q;
@@ -185,8 +195,7 @@ void CostMap::generateCostMap()
 //            double roll, pitch, yaw;
 
 //            tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-             angle = yaw + (i*m_scan->angle_increment);
-
+            angle = yaw + (i*m_scan->angle_increment);
 
 //            ROS_INFO("current grid x %d add %d",current_grid_x+200,  int((m_scan->ranges[i] * cos(angle))/0.05));
 //            ROS_INFO("current grid y %d add %d",current_grid_y+200,  int((m_scan->ranges[i] * sin(angle))/0.05));
@@ -198,7 +207,7 @@ void CostMap::generateCostMap()
             cost_map.data[(y*cost_map.info.width + x)] = 100;
 
 
-             cost_map_pub.publish(cost_map);
+            cost_map_pub.publish(cost_map);
         }
       }
 
@@ -250,8 +259,7 @@ void CostMap::integrateOdomToScanTime()
     tf::quaternionTFToMsg(q_f, q_);
     m_odom_at_scan.pose.pose.orientation = q_;
 
-    m_prev_scan = *m_scan;
-    m_prev_odom = m_odom;
+
 //    ROS_INFO("integrate odom to scan 9");
 
 
@@ -306,19 +314,21 @@ void CostMap::integratePoseToCurrentTime(tf::Pose &pose)
 //        ROS_INFO("INTEGRATE POSE TO TIME 6");
     }
 
-//    current_pose.pose.pose.position.x = x_f;
-//    current_pose.pose.pose.position.y = y_f;
-////    ROS_INFO("INTEGRATE POSE TO TIME 7");
-//    tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
-//    ROS_INFO("INTEGRATE POSE TO TIME 8");
-//    current_pose.pose.pose.orientation.w = q_f.w();
-//    current_pose.pose.pose.orientation.x = q_f.x();
-//    current_pose.pose.pose.orientation.y = q_f.y();
-//    current_pose.pose.pose.orientation.z = q_f.z();
+    current_pose.pose.pose.position.x = x_f;
+    current_pose.pose.pose.position.y = y_f;
+//    ROS_INFO("INTEGRATE POSE TO TIME 7");
+    tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
+    ROS_INFO("INTEGRATE POSE TO TIME 8");
+    current_pose.pose.pose.orientation.w = q_f.w();
+    current_pose.pose.pose.orientation.x = q_f.x();
+    current_pose.pose.pose.orientation.y = q_f.y();
+    current_pose.pose.pose.orientation.z = q_f.z();
 
 //    pose.setOrigin(tf::Vector3(x_f, y_f, 0));
 //    tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
 //    pose.setRotation(q_f);
+
+
 }
 
 
