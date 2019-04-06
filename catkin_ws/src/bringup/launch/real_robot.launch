@@ -1,0 +1,31 @@
+<launch>
+
+  <!--Rviz-->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find bringup)/rviz/tbot3.rviz"/>
+
+  <!-- Map server -->
+  <node pkg="map_server" name="map_server" type="map_server" args="$(find localization)/maps/map.yaml"/>
+
+  <!-- EKF -->
+  <include file="$(find odom_ekf)/launch/odom_ekf.launch"/>
+
+  <!-- Localization -->
+  <include file="$(find localization)/launch/localization.launch"/>
+
+  <!--Costmap
+  <include file="$(find cost_map)/launch/cost_map.launch"/>-->
+
+  <!-- Global Planner -->
+  <include file="$(find global_planner)/launch/global_planner.launch"/>
+
+  <!-- Local Navigator -->
+  <include file="$(find local_navigator)/launch/local_navigator.launch"/>
+
+  <!-- Local Planner -->
+  <include file="$(find local_planner)/launch/local_planner.launch"/>
+
+  <!-- Controller -->
+  <include file="$(find controller)/launch/controller.launch"/>
+
+
+</launch>
