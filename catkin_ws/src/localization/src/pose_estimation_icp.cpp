@@ -33,7 +33,7 @@ const Eigen::Matrix4f PoseEstimationICP::calcTransformICP(const PointCloud::Ptr 
     icp.setTransformationEstimation(trans_est);    
     icp.setInputSource(source_cloud);
     icp.setInputTarget(target_cloud);
-    icp.setMaximumIterations(50);
+    icp.setMaximumIterations(25);
     PointCloud out_cloud;
     icp.align(out_cloud);
     return icp.getFinalTransformation();
