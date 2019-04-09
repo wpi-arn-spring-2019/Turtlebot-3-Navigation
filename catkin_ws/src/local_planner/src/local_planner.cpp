@@ -12,6 +12,7 @@ LocalPlanner::LocalPlanner(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_trajectory_pub = nh.advertise<turtlebot_msgs::Trajectory>("/local_trajectory", 10);
     m_path_pub = nh.advertise<nav_msgs::Path>("/local_path", 10);
     m_goal_pub = nh.advertise<geometry_msgs::PoseStamped>("/local_goal", 100);
+    m_health_pub = nh.advertise<std_msgs::Bool>("/local_planner_health", 10);
     getParams(pnh);
 }
 
@@ -69,6 +70,7 @@ void LocalPlanner::planPath()
             {
                 ROS_WARN_STREAM("Failed to Find Local Path After " << m_num_retries << " Attempts. Resetting");
                 m_retry_it = 0;
+                pubHealth(false);
             }
             return;
         }
@@ -83,6 +85,7 @@ void LocalPlanner::planPath()
                 {
                     ROS_WARN_STREAM("Failed to Find Local Path After " << m_num_retries << " Attempts. Resetting");
                     m_retry_it = 0;
+                    pubHealth(false);
                 }
                 return;
             }
@@ -93,6 +96,7 @@ void LocalPlanner::planPath()
         if(checkForGoal(current_node))
         {
             m_retry_it = 0;
+            pubHealth(true);
             reconstructTrajectory();
             break;
         }
@@ -451,6 +455,13 @@ void LocalPlanner::pubTrajectory(const std::vector<GraphNode> &traj)
     }
     m_trajectory_pub.publish(trajectory);
     m_path_pub.publish(path);
+}
+
+void LocalPlanner::pubHealth(const bool &health)
+{
+    std_msgs::Bool health_;
+    health_.data = health;
+    m_health_pub.publish(health_);
 }
 
 void LocalPlanner::costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg)

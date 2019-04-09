@@ -9,14 +9,11 @@ LocalNavigator::LocalNavigator(ros::NodeHandle&nh, ros::NodeHandle&pnh)
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose", 10, &LocalNavigator::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &LocalNavigator::odomCallback, this);
     m_map_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 10, &LocalNavigator::costmapCallback, this);
+    m_local_planner_health_sub = nh.subscribe<std_msgs::Bool>("/local_planner_health", 10, &LocalNavigator::localPlannerHealthCallback, this);
     m_goal_pose_pub = nh.advertise<turtlebot_msgs::GoalPose>("/local_goal_pose", 10);
     m_goal_reached_pub = nh.advertise<std_msgs::Bool>("/goal_reached", 10);
+    m_replan_pub = nh.advertise<std_msgs::Bool>("/global_replan_request", 10);
     initializeNavigator(pnh);
-}
-
-LocalNavigator::~LocalNavigator()
-{
-
 }
 
 void LocalNavigator::initializeNavigator(ros::NodeHandle &pnh)
@@ -293,6 +290,13 @@ void LocalNavigator::publishGoalStatus(const bool &reached)
     m_goal_reached_pub.publish(status);
 }
 
+void LocalNavigator::pubReplan(const bool &replan)
+{
+    std_msgs::Bool replan_;
+    replan_.data = replan;
+    m_replan_pub.publish(replan_);
+}
+
 void LocalNavigator::pathCallback(const nav_msgs::Path::ConstPtr &msg)
 {
     if(!m_have_path)
@@ -329,6 +333,18 @@ void LocalNavigator::costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &ms
         m_have_map = true;
     }
     m_map = msg;
+}
+
+void LocalNavigator::localPlannerHealthCallback(const std_msgs::Bool::ConstPtr &msg)
+{
+    if(msg->data)
+    {
+        pubReplan(false);
+    }
+    else
+    {
+        pubReplan(true);
+    }
 }
 
 

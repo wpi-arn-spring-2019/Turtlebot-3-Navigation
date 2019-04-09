@@ -59,6 +59,7 @@ private:
     geometry_msgs::PoseWithCovariance m_pose_at_control;
     nav_msgs::Odometry::ConstPtr m_odom;
     nav_msgs::Odometry::ConstPtr m_prev_odom;
+    nav_msgs::Odometry::ConstPtr m_prev_prev_odom;
     nav_msgs::Odometry m_odom_at_pose;
     nav_msgs::Odometry m_odom_at_control;
 

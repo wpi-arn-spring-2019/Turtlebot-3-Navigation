@@ -11,7 +11,7 @@ int main(int argc, char **argv)
 
     Turtlebot::LocalPlanner planner(nh, pnh);
 
-    ros::Rate r(10);
+    ros::Rate r(5);
 
     while(ros::ok)
     {

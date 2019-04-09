@@ -158,7 +158,6 @@ void Controller::control()
             pubControls(m_smith_pred_pid_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control));
             break;
         }
-        m_prev_odom = m_odom;
     }
 }
 
@@ -174,7 +173,15 @@ const TurtlebotState Controller::getCurrentState()
     const double &v = std::sqrt(std::pow(m_odom_at_control.twist.twist.linear.x, 2)+
                                 std::pow(m_odom_at_control.twist.twist.linear.y, 2));
     const double &th_dot = m_odom_at_control.twist.twist.angular.z;
-    return TurtlebotState(x, y, th, v, th_dot);
+    const double &x_dot = m_odom_at_control.twist.twist.linear.x;
+    const double &y_dot = m_odom_at_control.twist.twist.linear.y;
+    const double &dt_acc = ros::Duration(m_odom->header.stamp - m_prev_odom->header.stamp).toSec();
+    const double &x_ddot = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt_acc;
+    const double &y_ddot = (m_odom->twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt_acc;
+    const double &dt_jerk = ros::Duration(m_prev_odom->header.stamp - m_prev_prev_odom->header.stamp).toSec();
+    const double &x_dddot = (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) / dt_jerk;
+    const double &y_dddot = (m_prev_odom->twist.twist.linear.y - m_prev_prev_odom->twist.twist.linear.y) / dt_jerk;
+    return TurtlebotState(x, y, th, v, th_dot, x_dot, y_dot, x_ddot, y_ddot, x_dddot, y_dddot);
 }
 
 const TurtlebotState Controller::getDesiredState(const bool &next) const
@@ -388,8 +395,11 @@ void Controller::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
     if(!m_have_odom)
     {
         m_have_odom = true;
-        m_prev_odom = msg;
+        m_odom = msg;
+        m_prev_odom = m_odom;
     }
+    m_prev_prev_odom = m_prev_odom;
+    m_prev_odom = m_odom;
     m_odom = msg;
 }
 

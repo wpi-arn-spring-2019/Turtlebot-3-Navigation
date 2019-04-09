@@ -25,12 +25,16 @@ public:
     const geometry_msgs::TwistStamped predictControls(const TurtlebotState &current_state,
                                                const TurtlebotState &desired_state,
                                                const TurtlebotState &next_desired_state,
-                                               const nav_msgs::Odometry &odom);
+                                               const nav_msgs::Odometry &odom,
+                                               const nav_msgs::Odometry &prev_odom,
+                                               const nav_msgs::Odometry &prev_prev_odom);
 
 private:
 
     const TurtlebotState predictFeedback(const geometry_msgs::TwistStamped &current_controls,
-                                         const nav_msgs::Odometry &odom);
+                                         const nav_msgs::Odometry &odom,
+                                         const nav_msgs::Odometry &prev_odom,
+                                         const nav_msgs::Odometry &prev_prev_odom);
 
     ContType *m_cont;
     ContType *m_predict_cont;

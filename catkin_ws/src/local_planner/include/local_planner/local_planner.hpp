@@ -15,6 +15,7 @@
 #include <turtlebot_msgs/Trajectory.h>
 #include <queue>
 #include <stdlib.h>
+#include <std_msgs/Bool.h>
 #include <tf/transform_listener.h>
 #include <urdf/model.h>
 
@@ -81,6 +82,7 @@ private:
     void reconstructTrajectory();
     const std::vector<GraphNode> reverseTrajectory(const std::vector<GraphNode> &reverse_traj);
     void pubTrajectory(const std::vector<GraphNode> &traj);
+    void pubHealth(const bool &health);
 
     //pubsub
     ros::Subscriber m_costmap_sub;
@@ -90,6 +92,7 @@ private:
     ros::Publisher m_path_pub;
     ros::Publisher m_trajectory_pub;
     ros::Publisher m_goal_pub;
+    ros::Publisher m_health_pub;
 
     //members
 

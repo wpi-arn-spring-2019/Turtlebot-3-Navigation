@@ -17,7 +17,7 @@ class LocalNavigator
 {
 public:
     LocalNavigator(ros::NodeHandle &nh, ros::NodeHandle &pnh);
-    ~LocalNavigator();
+    ~LocalNavigator(){}
 
     void setWaypoint();
 
@@ -26,6 +26,7 @@ private:
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
     void costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
+    void localPlannerHealthCallback(const std_msgs::Bool::ConstPtr &msg);
 
     void initializeNavigator(ros::NodeHandle &pnh);
     void setupCollision();
@@ -42,13 +43,16 @@ private:
     void integratePoseToCurrentTime();
     void publishGoalPose(const turtlebot_msgs::GoalPose &pose);
     void publishGoalStatus(const bool &reached);
+    void pubReplan(const bool &replan);
 
     ros::Subscriber m_path_sub;
     ros::Subscriber m_pose_sub;
     ros::Subscriber m_odom_sub;
-    ros::Subscriber m_map_sub;
+    ros::Subscriber m_map_sub;\
+    ros::Subscriber m_local_planner_health_sub;
     ros::Publisher m_goal_pose_pub;
     ros::Publisher m_goal_reached_pub;
+    ros::Publisher m_replan_pub;
 
     nav_msgs::Path::ConstPtr m_path;
     geometry_msgs::PoseWithCovarianceStamped::ConstPtr m_pose;
