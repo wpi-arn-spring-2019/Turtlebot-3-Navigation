@@ -155,7 +155,7 @@ void Controller::control()
             const TurtlebotState &current_state = getCurrentState();
             const TurtlebotState &desired_state = getDesiredState(false);
             const TurtlebotState &next_desired_state = getDesiredState(true);
-            pubControls(m_smith_pred_pid_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control));
+            pubControls(m_smith_pred_pid_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
             break;
         }
     }
@@ -175,12 +175,12 @@ const TurtlebotState Controller::getCurrentState()
     const double &th_dot = m_odom_at_control.twist.twist.angular.z;
     const double &x_dot = m_odom_at_control.twist.twist.linear.x;
     const double &y_dot = m_odom_at_control.twist.twist.linear.y;
-    const double &dt_acc = ros::Duration(m_odom->header.stamp - m_prev_odom->header.stamp).toSec();
-    const double &x_ddot = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt_acc;
-    const double &y_ddot = (m_odom->twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt_acc;
-    const double &dt_jerk = ros::Duration(m_prev_odom->header.stamp - m_prev_prev_odom->header.stamp).toSec();
-    const double &x_dddot = (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) / dt_jerk;
-    const double &y_dddot = (m_prev_odom->twist.twist.linear.y - m_prev_prev_odom->twist.twist.linear.y) / dt_jerk;
+    const double &dt_prev = ros::Duration(m_odom->header.stamp - m_prev_odom->header.stamp).toSec();
+    const double &x_ddot = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt_prev;
+    const double &y_ddot = (m_odom->twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt_prev;
+    const double &dt_prev_prev = ros::Duration(m_prev_odom->header.stamp - m_prev_prev_odom->header.stamp).toSec();
+    const double &x_dddot = (x_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) / dt_prev_prev) / dt_prev_prev;
+    const double &y_dddot = (y_ddot - (m_prev_odom->twist.twist.linear.y - m_prev_prev_odom->twist.twist.linear.y) / dt_prev_prev) / dt_prev_prev;
     return TurtlebotState(x, y, th, v, th_dot, x_dot, y_dot, x_ddot, y_ddot, x_dddot, y_dddot);
 }
 
@@ -220,14 +220,34 @@ const TurtlebotState Controller::integrateDesiredStateToCurrentTime(const int &t
     if(std::isnan(acc_linear) || std::isinf(acc_linear))
     {
         acc_linear = 0;
-    }    
+    }
     const double &th_dot = m_traj->yaw_rates[traj_it - 1] + acc_ang * dt;
     const double &th = m_traj->headings[traj_it - 1] + th_dot * dt + acc_ang * std::pow(dt, 2) / 2;
+    double jerk_x = 0;
+    double jerk_y = 0;
+    if(traj_it < m_traj->durations.size())
+    {
+      jerk_x = (((m_traj->speeds[traj_it + 1] - m_traj->speeds[traj_it]) / m_traj->durations[traj_it]) -
+               ((m_traj->speeds[traj_it + 1] - m_traj->speeds[traj_it]) / m_traj->durations[traj_it])) / m_traj->durations[traj_it] * cos(th);
+      jerk_y = (((m_traj->speeds[traj_it + 1] - m_traj->speeds[traj_it]) / m_traj->durations[traj_it]) -
+               ((m_traj->speeds[traj_it + 1] - m_traj->speeds[traj_it]) / m_traj->durations[traj_it])) / m_traj->durations[traj_it] * sin(th);
+    }
+    if(std::isnan(jerk_x) || std::isinf(jerk_x))
+    {
+        jerk_x = 0;
+    }
+    if(std::isnan(jerk_y) || std::isinf(jerk_y))
+    {
+        jerk_y = 0;
+    }
+    const double &acc_x = acc_linear * cos(th);
+    const double &acc_y = acc_linear * sin(th);
     const double &v = m_traj->speeds[traj_it] + acc_linear * dt;
+    const double &v_x = v * cos(th);
+    const double &v_y = v * sin(th);
     const double &x = m_traj->x_values[traj_it - 1] + (v * dt + acc_linear * std::pow(dt, 2) / 2) * cos(th);
     const double &y = m_traj->x_values[traj_it - 1] + (v * dt + acc_linear * std::pow(dt, 2) / 2) * sin(th);
-    return TurtlebotState(x, y, th, v, th_dot);
-
+    return TurtlebotState(x, y, th, v, th_dot, v_x, v_y, acc_x, acc_y, jerk_x, jerk_y);
 }
 
 void Controller::integratePoseToCurrentTime()
