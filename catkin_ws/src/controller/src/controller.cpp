@@ -140,21 +140,21 @@ void Controller::control()
     if(m_have_pose && m_have_odom && m_have_trajectory && !m_goal_reached)
     {
         m_current_time = ros::Time::now();
+        const TurtlebotState &current_state = getCurrentState();
+        const TurtlebotState &desired_state = getDesiredState(false);
+        const TurtlebotState &next_desired_state = getDesiredState(true);
         switch(m_cont_type)
         {
         case PD:
-            pubControls(m_pd_cont->getControls(getCurrentState(), getDesiredState(false)));
+            pubControls(m_smith_pred_pd->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
             break;
         case PID:
-            pubControls(m_pid_cont->getControls(getCurrentState(), getDesiredState(false)));
+            pubControls(m_smith_pred_pid->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
             break;
         case PD_FF:
-            pubControls(m_pd_ff_cont->getControls(getCurrentState(), getDesiredState(false)));
+            pubControls(m_smith_pred_pd_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
             break;
         case PID_FF:
-            const TurtlebotState &current_state = getCurrentState();
-            const TurtlebotState &desired_state = getDesiredState(false);
-            const TurtlebotState &next_desired_state = getDesiredState(true);
             pubControls(m_smith_pred_pid_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
             break;
         }
@@ -209,8 +209,8 @@ const TurtlebotState Controller::getDesiredState(const bool &next) const
 
 const TurtlebotState Controller::integrateDesiredStateToCurrentTime(const int &traj_it, const double &dt) const
 {
-    double acc_ang;
-    double acc_linear;
+    double acc_ang = 0;
+    double acc_linear = 0;
     acc_ang = (m_traj->yaw_rates[traj_it] - m_traj->yaw_rates[traj_it - 1]) / m_traj->durations[traj_it];
     acc_linear = (m_traj->speeds[traj_it] - m_traj->speeds[traj_it - 1]) / m_traj->durations[traj_it];
     if(std::isnan(acc_ang) || std::isinf(acc_ang))
