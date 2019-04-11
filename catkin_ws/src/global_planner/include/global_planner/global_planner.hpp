@@ -9,8 +9,9 @@
 #include <unordered_map>
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/Path.h>
-#include <turtlebot_msgs/GoalPose.h>
 #include <queue>
+#include <std_msgs/Bool.h>
+#include <turtlebot_msgs/GoalPose.h>
 #include <tf/transform_listener.h>
 #include <urdf/model.h>
 
@@ -34,6 +35,7 @@ private:
     void goalPoseCallback(const turtlebot_msgs::GoalPose::ConstPtr &msg);
     void rvizGoalPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
+    void replanCallback(const std_msgs::Bool::ConstPtr &msg);
 
     //setup methods
     void getParams(ros::NodeHandle &pnh);
@@ -77,6 +79,7 @@ private:
     ros::Subscriber m_goal_pose_sub;
     ros::Subscriber m_rviz_goal_pose_sub;
     ros::Subscriber m_pose_sub;
+    ros::Subscriber m_replan_sub;
     ros::Publisher m_path_pub;
     ros::Publisher m_goal_pub;
 

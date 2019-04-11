@@ -9,6 +9,7 @@ GlobalPlanner::GlobalPlanner(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     m_goal_pose_sub = nh.subscribe<turtlebot_msgs::GoalPose>("/global_goal_pose", 10, &GlobalPlanner::goalPoseCallback, this);
     m_rviz_goal_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/move_base_simple/goal", 10, &GlobalPlanner::rvizGoalPoseCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose", 10, &GlobalPlanner::poseCallback, this);
+    m_replan_sub = nh.subscribe<std_msgs::Bool>("/global_replan_request", 10, &GlobalPlanner::replanCallback, this);
     m_path_pub = nh.advertise<nav_msgs::Path>("/global_path", 10);
     m_goal_pub = nh.advertise<geometry_msgs::PoseStamped>("/global_goal", 100);
     getParams(pnh);
@@ -363,6 +364,14 @@ void GlobalPlanner::poseCallback(const geometry_msgs::PoseWithCovarianceStamped:
         m_have_pose = true;
     }
     m_pose = msg;
+}
+
+void GlobalPlanner::replanCallback(const std_msgs::Bool::ConstPtr &msg)
+{
+    if(msg->data)
+    {
+        planPath();
+    }
 }
 
 }
