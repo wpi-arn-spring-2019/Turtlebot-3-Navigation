@@ -8,6 +8,7 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &
     m_traj_sub = nh.subscribe<turtlebot_msgs::Trajectory>("/local_trajectory", 10, &Controller::trajectoryCallback, this);
     m_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose", 10, &Controller::poseCallback, this);
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &Controller::odomCallback, this);
+    m_goal_reached_sub = nh.subscribe<std_msgs::Bool>("/goal_reached", 10, &Controller::goalReachedCallback, this);
     m_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
     m_call_type = boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2);
     m_server = new dynamic_reconfigure::Server<controller::ControllerConfig>(m_config_mutex);
@@ -421,6 +422,11 @@ void Controller::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
     m_prev_prev_odom = m_prev_odom;
     m_prev_odom = m_odom;
     m_odom = msg;
+}
+
+void Controller::goalReachedCallback(const std_msgs::Bool::ConstPtr &msg)
+{
+    m_goal_reached = msg->data;
 }
 
 }

@@ -10,6 +10,7 @@
 #include <pd_ff_controller.hpp>
 #include <pid_ff_controller.hpp>
 #include <smith_predictor.hpp>
+#include <std_msgs/Bool.h>
 #include <tf/tf.h>
 #include <turtlebot_msgs/Trajectory.h>
 #include <turtlebot_state.hpp>
@@ -31,6 +32,7 @@ private:
     void trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
+    void goalReachedCallback(const std_msgs::Bool::ConstPtr &msg);
     void pubControls(const geometry_msgs::TwistStamped &control) const;
     void updateDynamicReconfigure();
 
@@ -45,6 +47,7 @@ private:
     ros::Subscriber m_traj_sub;
     ros::Subscriber m_pose_sub;
     ros::Subscriber m_odom_sub;
+    ros::Subscriber m_goal_reached_sub;
     ros::Publisher m_vel_pub;
 
     dynamic_reconfigure::Server<controller::ControllerConfig> *m_server;
