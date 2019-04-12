@@ -5,9 +5,9 @@ corridor_radius: 0.25
 max_speed: 0.10
 max_accel: 0.25
 
-goal_pos_tol: 0.05
-goal_ang_tol: 0.05
-goal_vel_tol: 0.01
+goal_pos_tol: 0.1
+goal_ang_tol: 0.1
+goal_vel_tol: 0.1
 
 turtlebot_radius: 0.21
 angular_col_res: 0.1

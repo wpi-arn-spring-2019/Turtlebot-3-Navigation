@@ -138,7 +138,7 @@ void Controller::getGains(ros::NodeHandle &pnh)
 
 void Controller::control()
 {
-    if(m_have_pose && m_have_odom && m_have_trajectory && !m_goal_reached)
+    if(m_have_pose && m_have_odom && m_have_trajectory && !m_goal_reached && !m_end_of_traj)
     {
         m_current_time = ros::Time::now();
         const TurtlebotState &current_state = getCurrentState();
@@ -159,6 +159,18 @@ void Controller::control()
             pubControls(m_smith_pred_pid_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
             break;
         }
+    }
+    else
+    {
+        geometry_msgs::TwistStamped null_control;
+        null_control.header.stamp = m_current_time;
+        null_control.twist.linear.x = 0;
+        null_control.twist.linear.y = 0;
+        null_control.twist.linear.z = 0;
+        null_control.twist.angular.x = 0;
+        null_control.twist.angular.y = 0;
+        null_control.twist.angular.z = 0;
+        pubControls(null_control);
     }
 }
 
@@ -185,7 +197,7 @@ const TurtlebotState Controller::getCurrentState()
     return TurtlebotState(x, y, th, v, th_dot, x_dot, y_dot, x_ddot, y_ddot, x_dddot, y_dddot);
 }
 
-const TurtlebotState Controller::getDesiredState(const bool &next) const
+const TurtlebotState Controller::getDesiredState(const bool &next)
 {
     const double &start_time = m_traj->header.stamp.toSec();    
     int traj_it = 0;    
@@ -198,7 +210,8 @@ const TurtlebotState Controller::getDesiredState(const bool &next) const
     {
         if(traj_it >= m_traj->durations.size() && !m_goal_reached)
         {
-            ROS_ERROR("Reached End of Trajectory Without Converging to Desired Trajectory");
+            m_end_of_traj = true;
+            return getCurrentState();
         }
         dt += m_traj->durations[traj_it];
         traj_it++;
@@ -398,7 +411,7 @@ void Controller::trajectoryCallback(const turtlebot_msgs::Trajectory::ConstPtr &
     {
         m_have_trajectory = true;
     }
-    m_goal_reached = false;
+    m_end_of_traj = false;
     m_traj = msg;
 }
 
@@ -427,6 +440,10 @@ void Controller::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
 void Controller::goalReachedCallback(const std_msgs::Bool::ConstPtr &msg)
 {
     m_goal_reached = msg->data;
+    if(m_goal_reached)
+    {
+        m_have_trajectory = false;
+    }
 }
 
 }

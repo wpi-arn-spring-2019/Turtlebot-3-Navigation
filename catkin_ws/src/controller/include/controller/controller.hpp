@@ -39,7 +39,7 @@ private:
     void initializeController(ros::NodeHandle &pnh);
     void getGains(ros::NodeHandle &pnh);
     const TurtlebotState getCurrentState();
-    const TurtlebotState getDesiredState(const bool &next) const;
+    const TurtlebotState getDesiredState(const bool &next);
     const TurtlebotState integrateDesiredStateToCurrentTime(const int &traj_it, const double &dt) const;
     void integratePoseToCurrentTime();
     void integrateOdomToCurrentTime();
@@ -87,6 +87,7 @@ private:
 
     double m_rate;
 
+    bool m_end_of_traj = false;
     bool m_first_it = true;
     bool m_goal_reached = false;
     bool m_have_trajectory = false;

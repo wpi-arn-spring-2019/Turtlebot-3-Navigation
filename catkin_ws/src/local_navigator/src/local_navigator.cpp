@@ -287,6 +287,10 @@ void LocalNavigator::publishGoalStatus(const bool &reached)
 {
     std_msgs::Bool status;
     status.data = reached;
+    if(reached)
+    {
+        m_have_path = false;
+    }
     m_goal_reached_pub.publish(status);
 }
 
