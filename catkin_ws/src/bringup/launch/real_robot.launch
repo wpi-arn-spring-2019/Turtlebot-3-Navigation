@@ -4,7 +4,7 @@
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find bringup)/rviz/tbot3.rviz"/>
 
   <!-- Map server -->
-  <node pkg="map_server" name="map_server" type="map_server" args="$(find localization)/maps/map.yaml"/>
+  <node pkg="map_server" name="map_server" type="map_server" args="$(find localization)/maps/Suraj_home.yaml"/>
 
   <!-- EKF -->
   <include file="$(find odom_ekf)/launch/odom_ekf.launch"/>
