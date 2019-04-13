@@ -137,6 +137,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_node src/controller_node.cpp
                                     src/controller.cpp
+                                    src/dyn_feed_lin_controller.cpp
                                     src/pd_controller.cpp
                                     src/pid_controller.cpp
                                     src/pd_ff_controller.cpp
