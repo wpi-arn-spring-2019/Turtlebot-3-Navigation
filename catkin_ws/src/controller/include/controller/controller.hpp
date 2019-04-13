@@ -2,6 +2,7 @@
 #include <ros/ros.h>
 #include <controller/ControllerConfig.h>
 #include <dynamic_reconfigure/server.h>
+#include <dyn_feed_lin_controller.hpp>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
@@ -75,15 +76,18 @@ private:
     std::vector<double> m_kp_gains_v;
     std::vector<double> m_ki_gains_v;
     std::vector<double> m_kd_gains_v;
+    std::vector<double> m_dfl_gains;
 
     PDController *m_pd_cont;
     PIDController *m_pid_cont;
     PDFeedForwardController *m_pd_ff_cont;
     PIDFeedForwardController *m_pid_ff_cont;
+    DYNController *m_dfl_cont;
     SmithPredictor<PDController> *m_smith_pred_pd;
     SmithPredictor<PIDController> *m_smith_pred_pid;
     SmithPredictor<PDFeedForwardController> *m_smith_pred_pd_ff;
     SmithPredictor<PIDFeedForwardController> *m_smith_pred_pid_ff;
+    SmithPredictor<DYNController> *m_smith_pred_dfl;
 
     double m_rate;
 

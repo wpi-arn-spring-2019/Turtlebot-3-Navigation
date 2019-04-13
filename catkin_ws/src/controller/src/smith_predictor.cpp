@@ -7,6 +7,7 @@ template class SmithPredictor<PDController>;
 template class SmithPredictor<PIDController>;
 template class SmithPredictor<PDFeedForwardController>;
 template class SmithPredictor<PIDFeedForwardController>;
+template class SmithPredictor<DYNController>;
 
 template <class ContType>
 

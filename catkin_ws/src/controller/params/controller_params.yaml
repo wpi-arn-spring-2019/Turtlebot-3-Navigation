@@ -2,8 +2,9 @@
 #PID: 1
 #PD_FF: 2
 #PID_FF: 3
+#DFL: 4
 
-controller_type: 3
+controller_type: 4
 
 kp_w_pd: 1
 kd_w_pd: 0.2

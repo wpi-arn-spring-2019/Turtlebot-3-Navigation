@@ -1,5 +1,6 @@
 #pragma once
 #include <ros/ros.h>
+#include <dyn_feed_lin_controller.hpp>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <nav_msgs/Odometry.h>

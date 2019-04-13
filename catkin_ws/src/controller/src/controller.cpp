@@ -18,6 +18,7 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &
     m_kp_gains_v.resize(5);
     m_ki_gains_v.resize(5);
     m_kd_gains_v.resize(5);
+    m_dfl_gains.resize(6);
     m_server->setCallback(m_call_type);
     initializeController(pnh);
 }
@@ -29,10 +30,12 @@ Controller::~Controller()
     delete m_pid_cont;
     delete m_pd_cont;
     delete m_pid_ff_cont;
+    delete m_dfl_cont;
     delete m_smith_pred_pd;
     delete m_smith_pred_pid;
     delete m_smith_pred_pd_ff;
     delete m_smith_pred_pid_ff;
+    delete m_smith_pred_dfl;
 }
 
 void Controller::initializeController(ros::NodeHandle &pnh)
@@ -103,6 +106,21 @@ void Controller::initializeController(ros::NodeHandle &pnh)
                                 m_kp_gains_v[3], m_ki_gains_v[3], m_kd_gains_v[3]);
         m_smith_pred_pid_ff = new SmithPredictor<PIDFeedForwardController>(*m_pid_ff_cont);
     }
+    else if(type == 4)
+    {
+        m_config.controller_type = type;
+        m_config.lam0 = m_dfl_gains[0];
+        m_config.lam1 = m_dfl_gains[1];
+        m_config.lam2 = m_dfl_gains[2];
+        m_config.gam0 = m_dfl_gains[3];
+        m_config.gam1 = m_dfl_gains[4];
+        m_config.gam2 = m_dfl_gains[5];
+        m_cont_type = controller_type::DFL;
+        m_dfl_cont = new DYNController();
+        m_dfl_cont->setGains(m_dfl_gains[0], m_dfl_gains[1], m_dfl_gains[2],
+                             m_dfl_gains[3], m_dfl_gains[4], m_dfl_gains[5]);
+        m_smith_pred_dfl = new SmithPredictor<DYNController>(*m_dfl_cont);
+    }
     else
     {
         ROS_ERROR("Invalid Controller Type Specified. Options Are: pd, pid, pd_ff, pid_ff");
@@ -134,6 +152,12 @@ void Controller::getGains(ros::NodeHandle &pnh)
     pnh.getParam("kp_v_pid_ff", m_kp_gains_v[3]);
     pnh.getParam("ki_v_pid_ff", m_ki_gains_v[3]);
     pnh.getParam("kd_v_pid_ff", m_kd_gains_v[3]);
+    pnh.getParam("lam0_dyn_fed_lin", m_dfl_gains[0]);
+    pnh.getParam("lam1_dyn_fed_lin", m_dfl_gains[1]);
+    pnh.getParam("lam2_dyn_fed_lin", m_dfl_gains[2]);
+    pnh.getParam("gam0_dyn_fed_lin", m_dfl_gains[3]);
+    pnh.getParam("gam1_dyn_fed_lin", m_dfl_gains[4]);
+    pnh.getParam("gam2_dyn_fed_lin", m_dfl_gains[5]);
 }
 
 void Controller::control()
@@ -158,6 +182,8 @@ void Controller::control()
         case PID_FF:
             pubControls(m_smith_pred_pid_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
             break;
+        case DFL:
+            pubControls(m_smith_pred_dfl->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
         }
     }
     else
@@ -358,7 +384,7 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             config.ki_v = 0;
             config.kd_v = m_kd_gains_v[0];
         }
-        if(type == 1)
+        else if(type == 1)
         {
             m_cont_type = Controller::PID;
             m_pid_cont = new PIDController;            
@@ -373,7 +399,7 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             config.ki_v = m_ki_gains_v[1];
             config.kd_v = m_kd_gains_v[1];
         }
-        if(type == 2)
+        else if(type == 2)
         {
             m_cont_type = Controller::PD_FF;
             m_pd_ff_cont = new PDFeedForwardController;            
@@ -387,7 +413,7 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             config.ki_v = 0;
             config.kd_v = m_kd_gains_v[2];
         }
-        if(type == 3)
+        else if(type == 3)
         {
             m_cont_type = Controller::PID_FF;
             m_pid_ff_cont = new PIDFeedForwardController;            
@@ -401,6 +427,21 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             config.kp_v = m_kp_gains_v[3];
             config.ki_v = m_ki_gains_v[3];
             config.kd_v = m_kd_gains_v[3];
+        }
+        else if(type == 4)
+        {
+            m_cont_type = Controller::DFL;
+            m_cont_type = controller_type::DFL;
+            m_dfl_cont = new DYNController();
+            m_dfl_cont->setGains(m_dfl_gains[0], m_dfl_gains[1], m_dfl_gains[2],
+                                 m_dfl_gains[3], m_dfl_gains[4], m_dfl_gains[5]);
+            m_smith_pred_dfl = new SmithPredictor<DYNController>(*m_dfl_cont);
+            config.lam0 = m_dfl_gains[0];
+            config.lam1 = m_dfl_gains[1];
+            config.lam2 = m_dfl_gains[2];
+            config.gam0 = m_dfl_gains[3];
+            config.gam1 = m_dfl_gains[4];
+            config.gam2 = m_dfl_gains[5];
         }
     }
 }
