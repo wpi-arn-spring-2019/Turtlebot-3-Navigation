@@ -141,8 +141,7 @@ add_executable(${PROJECT_NAME}_node src/controller_node.cpp
                                     src/pd_controller.cpp
                                     src/pid_controller.cpp
                                     src/pd_ff_controller.cpp
-                                    src/pid_ff_controller.cpp
-                                    src/smith_predictor.cpp)
+                                    src/pid_ff_controller.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

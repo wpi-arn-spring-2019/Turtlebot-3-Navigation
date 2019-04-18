@@ -10,7 +10,6 @@
 #include <pid_controller.hpp>
 #include <pd_ff_controller.hpp>
 #include <pid_ff_controller.hpp>
-#include <smith_predictor.hpp>
 #include <std_msgs/Bool.h>
 #include <tf/tf.h>
 #include <turtlebot_msgs/Trajectory.h>
@@ -83,11 +82,6 @@ private:
     PDFeedForwardController *m_pd_ff_cont;
     PIDFeedForwardController *m_pid_ff_cont;
     DYNController *m_dfl_cont;
-    SmithPredictor<PDController> *m_smith_pred_pd;
-    SmithPredictor<PIDController> *m_smith_pred_pid;
-    SmithPredictor<PDFeedForwardController> *m_smith_pred_pd_ff;
-    SmithPredictor<PIDFeedForwardController> *m_smith_pred_pid_ff;
-    SmithPredictor<DYNController> *m_smith_pred_dfl;
 
     double m_rate;
 

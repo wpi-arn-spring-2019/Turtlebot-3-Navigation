@@ -31,11 +31,6 @@ Controller::~Controller()
     delete m_pd_cont;
     delete m_pid_ff_cont;
     delete m_dfl_cont;
-    delete m_smith_pred_pd;
-    delete m_smith_pred_pid;
-    delete m_smith_pred_pd_ff;
-    delete m_smith_pred_pid_ff;
-    delete m_smith_pred_dfl;
 }
 
 void Controller::initializeController(ros::NodeHandle &pnh)
@@ -57,7 +52,6 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_pd_cont = new PDController();        
         m_pd_cont->setGains(m_kp_gains_w[0], m_kd_gains_w[0],
                             m_kp_gains_v[0], m_kd_gains_v[0]);
-        m_smith_pred_pd = new SmithPredictor<PDController>(*m_pd_cont);
     }
     else if(type == 1)
     {      
@@ -73,7 +67,6 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_pid_cont->initializeController();
         m_pid_cont->setGains(m_kp_gains_w[1], m_ki_gains_w[1], m_kd_gains_w[1],
                              m_kp_gains_v[1], m_ki_gains_v[1], m_kd_gains_v[1]);
-        m_smith_pred_pid = new SmithPredictor<PIDController>(*m_pid_cont);
     }
     else if(type == 2)
     {
@@ -88,7 +81,6 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_pd_ff_cont = new PDFeedForwardController();        
         m_pd_ff_cont->setGains(m_kp_gains_w[2], m_kd_gains_w[2],
                                m_kp_gains_v[2], m_kd_gains_v[2]);
-        m_smith_pred_pd_ff = new SmithPredictor<PDFeedForwardController>(*m_pd_ff_cont);
     }
     else if(type == 3)
     {
@@ -104,7 +96,6 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_pid_ff_cont->initializeController();
         m_pid_ff_cont->setGains(m_kp_gains_w[3], m_ki_gains_w[3], m_kd_gains_w[3],
                                 m_kp_gains_v[3], m_ki_gains_v[3], m_kd_gains_v[3]);
-        m_smith_pred_pid_ff = new SmithPredictor<PIDFeedForwardController>(*m_pid_ff_cont);
     }
     else if(type == 4)
     {
@@ -119,7 +110,6 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_dfl_cont = new DYNController();
         m_dfl_cont->setGains(m_dfl_gains[0], m_dfl_gains[1], m_dfl_gains[2],
                              m_dfl_gains[3], m_dfl_gains[4], m_dfl_gains[5]);
-        m_smith_pred_dfl = new SmithPredictor<DYNController>(*m_dfl_cont);
     }
     else
     {
@@ -171,19 +161,19 @@ void Controller::control()
         switch(m_cont_type)
         {
         case PD:
-            pubControls(m_smith_pred_pd->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
+            pubControls(m_pd_cont->getControls(current_state, desired_state));
             break;
         case PID:
-            pubControls(m_smith_pred_pid->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
+            pubControls(m_pid_cont->getControls(current_state, desired_state));
             break;
         case PD_FF:
-            pubControls(m_smith_pred_pd_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
+            pubControls(m_pd_ff_cont->getControls(current_state, desired_state));
             break;
         case PID_FF:
-            pubControls(m_smith_pred_pid_ff->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
+            pubControls(m_pid_ff_cont->getControls(current_state, desired_state));
             break;
         case DFL:
-            pubControls(m_smith_pred_dfl->predictControls(current_state, desired_state, next_desired_state, m_odom_at_control, *m_prev_odom, *m_prev_prev_odom));
+            pubControls(m_dfl_cont->getControls(current_state, desired_state));
         }
     }
     else
@@ -376,7 +366,6 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             m_pd_cont = new PDController;            
             m_pd_cont->setGains(m_kp_gains_w[0], m_kd_gains_w[0],
                                 m_kp_gains_v[0], m_kd_gains_v[0]);
-            m_smith_pred_pd = new SmithPredictor<PDController>(*m_pd_cont);
             config.kp_w = m_kp_gains_w[0];
             config.ki_w = 0;
             config.kd_w = m_kd_gains_w[0];
@@ -391,7 +380,6 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             m_pid_cont->initializeController();
             m_pid_cont->setGains(m_kp_gains_w[1], m_ki_gains_w[1], m_kd_gains_w[1],
                                  m_kp_gains_v[1], m_ki_gains_v[1], m_kd_gains_v[1]);
-            m_smith_pred_pid = new SmithPredictor<PIDController>(*m_pid_cont);
             config.kp_w = m_kp_gains_w[1];
             config.ki_w = m_ki_gains_w[1];
             config.kd_w = m_kd_gains_w[1];
@@ -405,7 +393,6 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             m_pd_ff_cont = new PDFeedForwardController;            
             m_pd_ff_cont->setGains(m_kp_gains_w[2], m_kd_gains_w[2],
                                    m_kp_gains_v[2], m_kd_gains_v[2]);
-            m_smith_pred_pd_ff = new SmithPredictor<PDFeedForwardController>(*m_pd_ff_cont);
             config.kp_w = m_kp_gains_w[2];
             config.ki_w = 0;
             config.kd_w = m_kd_gains_w[2];
@@ -420,7 +407,6 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             m_pid_ff_cont->initializeController();
             m_pid_ff_cont->setGains(m_kp_gains_w[3], m_ki_gains_w[3], m_kd_gains_w[3],
                                     m_kp_gains_v[3], m_ki_gains_v[3], m_kd_gains_v[3]);
-            m_smith_pred_pid_ff = new SmithPredictor<PIDFeedForwardController>(*m_pid_ff_cont);
             config.kp_w = m_kp_gains_w[3];
             config.ki_w = m_ki_gains_w[3];
             config.kd_w = m_kd_gains_w[3];
@@ -435,7 +421,6 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             m_dfl_cont = new DYNController();
             m_dfl_cont->setGains(m_dfl_gains[0], m_dfl_gains[1], m_dfl_gains[2],
                                  m_dfl_gains[3], m_dfl_gains[4], m_dfl_gains[5]);
-            m_smith_pred_dfl = new SmithPredictor<DYNController>(*m_dfl_cont);
             config.lam0 = m_dfl_gains[0];
             config.lam1 = m_dfl_gains[1];
             config.lam2 = m_dfl_gains[2];
