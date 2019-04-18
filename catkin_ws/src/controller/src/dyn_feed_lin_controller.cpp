@@ -54,6 +54,11 @@ const geometry_msgs::TwistStamped DYNController::getControls(const TurtlebotStat
 
     m_prev_time = current_time;
 
+    m_dyn_vel_cmd.twist.linear.x = desire_vel ;
+    m_dyn_vel_cmd.twist.angular.z = desire_ang_vel ;
+
+    return m_dyn_vel_cmd;
+
 }
 
 void DYNController::setGains(const double &lam0_dyn_fed_lin, const double &lam1_dyn_fed_lin,

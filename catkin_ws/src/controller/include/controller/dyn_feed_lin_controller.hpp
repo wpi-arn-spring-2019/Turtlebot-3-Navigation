@@ -24,7 +24,7 @@ private:
     double m_lam1_dyn_fed_lin ;
     double m_lam2_dyn_fed_lin ;
     bool m_first_it = true;
-
+    geometry_msgs::TwistStamped m_dyn_vel_cmd;
 
 };
 
