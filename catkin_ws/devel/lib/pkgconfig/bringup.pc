@@ -1,0 +1,8 @@
+prefix=/home/suraj/Turtlebot-3-Navigation/catkin_ws/devel
+
+Name: bringup
+Description: Description of bringup
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/suraj/Turtlebot-3-Navigation/catkin_ws/devel/lib 
+Requires: 

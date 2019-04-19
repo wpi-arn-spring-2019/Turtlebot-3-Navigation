@@ -1,0 +1,8 @@
+prefix=/home/suraj/Turtlebot-3-Navigation/catkin_ws/install
+
+Name: local_planner
+Description: Description of local_planner
+Version: 0.0.0
+Cflags: -I/home/suraj/Turtlebot-3-Navigation/catkin_ws/install/include
+Libs: -L/home/suraj/Turtlebot-3-Navigation/catkin_ws/install/lib 
+Requires: geometry_msgs nav_msgs turtlebot_msgs roscpp sensor_msgs tf urdf

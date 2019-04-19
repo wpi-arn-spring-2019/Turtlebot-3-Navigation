@@ -4,7 +4,7 @@
 #PID_FF: 3
 #DFL: 4
 
-controller_type: 4
+controller_type: 1
 
 kp_w_pd: 1
 kd_w_pd: 0.2
@@ -13,7 +13,7 @@ kd_v_pd: 0.1
 
 kp_w_pid: 1
 ki_w_pid: 0.001
-kd_w_pid: 0.2
+kd_w_pid: 0.02
 kp_v_pid: 1
 ki_v_pid: 0.0001
 kd_v_pid: 0.1
@@ -30,9 +30,9 @@ kp_v_pid_ff: 0.0025
 ki_v_pid_ff: 0.0001
 kd_v_pid_ff: 0.0025
 
-lam0_dyn_fed_lin: 0.001
-lam1_dyn_fed_lin: 0.03
-lam2_dyn_fed_lin: 0.3
-gam0_dyn_fed_lin: 0.001
-gam1_dyn_fed_lin: 0.03
-gam2_dyn_fed_lin: 0.3
+lam0_dyn_fed_lin: 0.1
+lam1_dyn_fed_lin: 3
+lam2_dyn_fed_lin: 30
+gam0_dyn_fed_lin: 0.1
+gam1_dyn_fed_lin: 3
+gam2_dyn_fed_lin: 30

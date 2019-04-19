@@ -15,6 +15,8 @@ const geometry_msgs::TwistStamped PDFeedForwardController::getControls(const Tur
         m_prev_time = ros::Time::now();
         m_prev_state = new TurtlebotState(current_state);
         m_first_it = false;
+
+
     }
     ros::Time current_time = ros::Time::now();
     const double &dt = ros::Duration(current_time - m_prev_time).toSec();

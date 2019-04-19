@@ -1,0 +1,8 @@
+prefix=/home/suraj/Turtlebot-3-Navigation/catkin_ws/devel
+
+Name: odom_ekf
+Description: Description of odom_ekf
+Version: 0.0.0
+Cflags: -I/home/suraj/Turtlebot-3-Navigation/catkin_ws/src/odom_ekf/include/odom_ekf
+Libs: -L/home/suraj/Turtlebot-3-Navigation/catkin_ws/devel/lib 
+Requires: nav_msgs roscpp sensor_msgs

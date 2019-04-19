@@ -24,8 +24,11 @@ class Controller
 public:
     Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &rate);
     ~Controller();
-
     void control();
+
+
+    ros::Publisher m_pose_error_pub;
+
 
 private:
     void dynamicReconfigureCallback(controller::ControllerConfig &config, uint32_t level);

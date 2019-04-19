@@ -21,6 +21,9 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &
     m_dfl_gains.resize(6);
     m_server->setCallback(m_call_type);
     initializeController(pnh);
+
+    m_pose_error_pub = nh.advertise<geometry_msgs::TwistStamped>("/pos_error_pose", 10);
+
 }
 
 Controller::~Controller()
@@ -174,6 +177,9 @@ void Controller::control()
             break;
         case DFL:
             pubControls(m_dfl_cont->getControls(current_state, desired_state));
+            m_pose_error_pub.publish(m_dfl_cont->m_pose_error);
+
+            break;
         }
     }
     else

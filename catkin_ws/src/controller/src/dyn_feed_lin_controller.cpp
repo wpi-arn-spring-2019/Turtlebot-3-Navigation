@@ -6,6 +6,7 @@ namespace Turtlebot
 DYNController::DYNController()
 {
 
+
 }
 
 DYNController::~DYNController()
@@ -27,6 +28,14 @@ const geometry_msgs::TwistStamped DYNController::getControls(const TurtlebotStat
     geometry_msgs::TwistStamped control;
     control.header.stamp = current_time;
 
+    ROS_INFO("current position in X = %If , desired position in X = %If , error in X = %If "   , current_state.x , desired_state.x , current_state.x - desired_state.x );
+    ROS_INFO("current position in Y = %If , desired position in Y = %If , error in Y = %If \n" , current_state.y , desired_state.y , current_state.y - desired_state.y );
+
+//    ROS_INFO("current velocity in X = %If , current velocity in Y = %If" , current_state.x_dot , current_state.y_dot );
+//    ROS_INFO("desired velocity in X = %If , desired velocity in Y = %If \n" , desired_state.x_dot , desired_state.y_dot );
+
+//    ROS_INFO("current accleration in X = %If , current acceleration in Y = %If" , current_state.x_ddot , current_state.y_ddot );
+//    ROS_INFO("desired accleration in X = %If , desired acceleration in Y = %If \n\n" , desired_state.x_ddot , desired_state.y_ddot );
 
     const double &error_dist_x = current_state.x - desired_state.x;
     const double &error_vel_x = current_state.x_dot - desired_state.x_dot;
@@ -51,11 +60,15 @@ const geometry_msgs::TwistStamped DYNController::getControls(const TurtlebotStat
 
     double desire_ang_vel = desire_vel / radius_curv;
 
-
     m_prev_time = current_time;
 
     m_dyn_vel_cmd.twist.linear.x = desire_vel ;
     m_dyn_vel_cmd.twist.angular.z = desire_ang_vel ;
+
+    m_pose_error.header.stamp = ros::Time::now();
+    m_pose_error.twist.linear.x = current_state.x ;
+    m_pose_error.twist.linear.y = desired_state.x ;
+    m_pose_error.twist.linear.z = error_dist_x ;
 
     return m_dyn_vel_cmd;
 

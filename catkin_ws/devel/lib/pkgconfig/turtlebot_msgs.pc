@@ -1,0 +1,8 @@
+prefix=/home/suraj/Turtlebot-3-Navigation/catkin_ws/devel
+
+Name: turtlebot_msgs
+Description: Description of turtlebot_msgs
+Version: 0.0.1
+Cflags: -I/home/suraj/Turtlebot-3-Navigation/catkin_ws/devel/include
+Libs: -L/home/suraj/Turtlebot-3-Navigation/catkin_ws/devel/lib 
+Requires: message_runtime std_msgs
