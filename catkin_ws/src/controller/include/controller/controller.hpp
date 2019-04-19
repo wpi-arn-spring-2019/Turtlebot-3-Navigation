@@ -13,6 +13,7 @@
 #include <std_msgs/Bool.h>
 #include <tf/tf.h>
 #include <turtlebot_msgs/Trajectory.h>
+#include <turtlebot_msgs/Tune.h>
 #include <turtlebot_state.hpp>
 
 
@@ -27,7 +28,7 @@ public:
     void control();
 
 
-    ros::Publisher m_pose_error_pub;
+    ros::Publisher m_error_pub;
 
 
 private:

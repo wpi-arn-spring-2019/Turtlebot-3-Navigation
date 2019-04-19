@@ -22,7 +22,7 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &
     m_server->setCallback(m_call_type);
     initializeController(pnh);
 
-    m_pose_error_pub = nh.advertise<geometry_msgs::TwistStamped>("/pos_error_pose", 10);
+    m_error_pub = nh.advertise<turtlebot_msgs::Tune>("/pos_error_pose", 10);
 
 }
 
@@ -165,20 +165,24 @@ void Controller::control()
         {
         case PD:
             pubControls(m_pd_cont->getControls(current_state, desired_state));
+            m_error_pub.publish(m_pd_cont->m_pose_error);
             break;
         case PID:
             pubControls(m_pid_cont->getControls(current_state, desired_state));
+            m_error_pub.publish(m_pid_cont->m_pose_error);
             break;
         case PD_FF:
             pubControls(m_pd_ff_cont->getControls(current_state, desired_state));
+            m_error_pub.publish(m_pd_ff_cont->m_pose_error);
+
             break;
         case PID_FF:
             pubControls(m_pid_ff_cont->getControls(current_state, desired_state));
+            m_error_pub.publish(m_pid_ff_cont->m_pose_error);
             break;
         case DFL:
             pubControls(m_dfl_cont->getControls(current_state, desired_state));
-            m_pose_error_pub.publish(m_dfl_cont->m_pose_error);
-
+            m_error_pub.publish(m_dfl_cont->m_pose_error);
             break;
         }
     }

@@ -10,6 +10,7 @@ add_message_files(
   FILES
   GoalPose.msg
   Trajectory.msg
+  Tune.msg
 )
 
 generate_messages(

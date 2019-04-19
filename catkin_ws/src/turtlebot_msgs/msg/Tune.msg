@@ -1,0 +1,20 @@
+Header header
+
+float64 cur_pos_x
+float64 cur_vel_x
+float64 cur_acc_x
+float64 cur_pos_y
+float64 cur_vel_y
+float64 cur_acc_y
+float64 des_pos_x
+float64 des_vel_x
+float64 des_acc_x
+float64 des_pos_y
+float64 des_vel_y
+float64 des_acc_y
+float64 err_pos_x
+float64 err_vel_x
+float64 err_acc_x
+float64 err_pos_y
+float64 err_vel_y
+float64 err_acc_y

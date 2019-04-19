@@ -51,6 +51,32 @@ const geometry_msgs::TwistStamped PIDFeedForwardController::getControls(const Tu
     control.twist.linear.x = control_v;
     m_prev_time = current_time;
     m_prev_state = new TurtlebotState(current_state);
+
+    m_pose_error.header.stamp = ros::Time::now();
+    m_pose_error.cur_pos_x = current_state.x;
+    m_pose_error.des_pos_x = desired_state.x ;
+    m_pose_error.err_pos_x = desired_state.x - current_state.x ;
+
+    m_pose_error.cur_pos_y = current_state.y ;
+    m_pose_error.des_pos_y = desired_state.y ;
+    m_pose_error.err_pos_y = desired_state.y - current_state.y ;
+
+    m_pose_error.cur_vel_x = current_state.x_dot ;
+    m_pose_error.des_vel_x = desired_state.x_dot ;
+    m_pose_error.err_vel_x = desired_state.x_dot - current_state.x_dot ;
+
+    m_pose_error.cur_vel_y = current_state.y_dot ;
+    m_pose_error.des_vel_y = desired_state.y_dot ;
+    m_pose_error.err_vel_y = desired_state.y_dot - current_state.y_dot ;
+
+    m_pose_error.cur_acc_x = current_state.x_ddot ;
+    m_pose_error.des_acc_x = desired_state.x_ddot ;
+    m_pose_error.err_acc_x = desired_state.x_ddot - current_state.x_ddot ;
+
+    m_pose_error.cur_acc_y = current_state.y_ddot ;
+    m_pose_error.des_acc_y = desired_state.y_ddot ;
+    m_pose_error.err_acc_y = desired_state.y_ddot - current_state.y_ddot ;
+
     return control;
 }
 

@@ -37,38 +37,58 @@ const geometry_msgs::TwistStamped DYNController::getControls(const TurtlebotStat
 //    ROS_INFO("current accleration in X = %If , current acceleration in Y = %If" , current_state.x_ddot , current_state.y_ddot );
 //    ROS_INFO("desired accleration in X = %If , desired acceleration in Y = %If \n\n" , desired_state.x_ddot , desired_state.y_ddot );
 
-    const double &error_dist_x = current_state.x - desired_state.x;
-    const double &error_vel_x = current_state.x_dot - desired_state.x_dot;
-    const double &error_acc_x = current_state.x_ddot - desired_state.x_ddot;
+    const double &error_dist_x = desired_state.x - current_state.x;
+    const double &error_vel_x =  desired_state.x_dot - current_state.x_dot ;
+    const double &error_acc_x =  desired_state.x_ddot - current_state.x_ddot ;
     const double &des_jerk_x = desired_state.x_dddot ;
 
-    const double &error_dist_y = current_state.y - desired_state.y;
-    const double &error_vel_y = current_state.y_dot - desired_state.y_dot;
-    const double &error_acc_y = current_state.y_ddot - desired_state.y_ddot;
+    const double &error_dist_y = desired_state.y - current_state.y ;
+    const double &error_vel_y = desired_state.y_dot - current_state.y_dot ;
+    const double &error_acc_y = desired_state.y_ddot - current_state.y_ddot ;
     const double &des_jerk_y = desired_state.y_dddot ;
 
     const double &cur_jerk_x = des_jerk_x - m_lam2_dyn_fed_lin*error_acc_x  - m_lam1_dyn_fed_lin*error_vel_x - m_lam0_dyn_fed_lin*error_dist_x ;
     const double &cur_jerk_y = des_jerk_y - m_lam2_dyn_fed_lin*error_acc_y  - m_lam1_dyn_fed_lin*error_vel_y - m_lam0_dyn_fed_lin*error_dist_y ;
 
-    double desire_vel_x = current_state.x_dot + current_state.x_ddot*dt + cur_jerk_x*dt*dt/2;
-    double desire_vel_y = current_state.y_dot + current_state.y_ddot*dt + cur_jerk_y*dt*dt/2;
+    double input_vel_x = current_state.x_dot + current_state.x_ddot*dt + cur_jerk_x*dt*dt/2;
+    double input_vel_y = current_state.y_dot + current_state.y_ddot*dt + cur_jerk_y*dt*dt/2;
 
-    double desire_vel = std::sqrt(std::pow(desire_vel_x, 2) + std::pow(desire_vel_y, 2));
+    double input_vel = std::sqrt(std::pow(input_vel_x, 2) + std::pow(input_vel_y, 2));
 
     double radius_curv = (std::pow((current_state.x_dot*current_state.x_dot +current_state.y_dot*current_state.y_dot), 1.5))/
             (current_state.x_dot*current_state.y_ddot - current_state.y_dot*current_state.x_ddot) ;
 
-    double desire_ang_vel = desire_vel / radius_curv;
+    double input_ang_vel = input_vel / radius_curv;
 
     m_prev_time = current_time;
 
-    m_dyn_vel_cmd.twist.linear.x = desire_vel ;
-    m_dyn_vel_cmd.twist.angular.z = desire_ang_vel ;
+    m_dyn_vel_cmd.twist.linear.x = input_vel ;
+    m_dyn_vel_cmd.twist.angular.z = input_ang_vel ;
 
     m_pose_error.header.stamp = ros::Time::now();
-    m_pose_error.twist.linear.x = current_state.x ;
-    m_pose_error.twist.linear.y = desired_state.x ;
-    m_pose_error.twist.linear.z = error_dist_x ;
+    m_pose_error.cur_pos_x = current_state.x ;
+    m_pose_error.des_pos_x = desired_state.x ;
+    m_pose_error.err_pos_x = error_dist_x ;
+
+    m_pose_error.cur_pos_y = current_state.y ;
+    m_pose_error.des_pos_y = desired_state.y ;
+    m_pose_error.err_pos_y = error_dist_y ;
+
+    m_pose_error.cur_vel_x = current_state.x_dot ;
+    m_pose_error.des_vel_x = desired_state.y_dot ;
+    m_pose_error.err_vel_x = error_vel_x ;
+
+    m_pose_error.cur_vel_y = current_state.y_dot ;
+    m_pose_error.des_vel_y = desired_state.y_dot ;
+    m_pose_error.err_vel_y = error_vel_y ;
+
+    m_pose_error.cur_acc_x = current_state.x_ddot ;
+    m_pose_error.des_acc_x = desired_state.x_ddot ;
+    m_pose_error.err_acc_x = error_acc_x ;
+
+    m_pose_error.cur_acc_y = current_state.y_ddot ;
+    m_pose_error.des_acc_y = desired_state.y_ddot ;
+    m_pose_error.err_acc_y = error_acc_y ;
 
     return m_dyn_vel_cmd;
 
