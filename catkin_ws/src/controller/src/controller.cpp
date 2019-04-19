@@ -80,7 +80,7 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_config.kp_v = m_kp_gains_v[2];
         m_config.ki_v = 0;
         m_config.kd_v = m_kd_gains_v[2];
-        m_cont_type = controller_type::PID_FF;
+        m_cont_type = controller_type::PD_FF;
         m_pd_ff_cont = new PDFeedForwardController();        
         m_pd_ff_cont->setGains(m_kp_gains_w[2], m_kd_gains_w[2],
                                m_kp_gains_v[2], m_kd_gains_v[2]);
