@@ -249,43 +249,45 @@ const TurtlebotState Controller::getDesiredState(const bool &next)
 const TurtlebotState Controller::integrateDesiredStateToCurrentTime(const int &traj_it, const double &dt) const
 {
     double acc_ang = 0;
-    double acc_linear = 0;
     acc_ang = (m_traj->yaw_rates[traj_it] - m_traj->yaw_rates[traj_it - 1]) / m_traj->durations[traj_it];
-    acc_linear = (m_traj->speeds[traj_it] - m_traj->speeds[traj_it - 1]) / m_traj->durations[traj_it];
     if(std::isnan(acc_ang) || std::isinf(acc_ang))
     {
         acc_ang = 0;
-    }
-    if(std::isnan(acc_linear) || std::isinf(acc_linear))
-    {
-        acc_linear = 0;
     }
     const double &th_dot = m_traj->yaw_rates[traj_it - 1] + acc_ang * dt;
     const double &th = m_traj->headings[traj_it - 1] + th_dot * dt + acc_ang * std::pow(dt, 2) / 2;
     double jerk_x = 0;
     double jerk_y = 0;
-    if(traj_it < m_traj->durations.size())
+    double acc_x = 0;
+    double acc_y = 0;
+    if(traj_it < m_traj->durations.size() - 4)
     {
-      jerk_x = (((m_traj->speeds[traj_it + 1] - m_traj->speeds[traj_it]) / m_traj->durations[traj_it]) -
-               ((m_traj->speeds[traj_it + 1] - m_traj->speeds[traj_it]) / m_traj->durations[traj_it])) / m_traj->durations[traj_it] * cos(th);
-      jerk_y = (((m_traj->speeds[traj_it + 1] - m_traj->speeds[traj_it]) / m_traj->durations[traj_it]) -
-               ((m_traj->speeds[traj_it + 1] - m_traj->speeds[traj_it]) / m_traj->durations[traj_it])) / m_traj->durations[traj_it] * sin(th);
+        const double &xp3 = m_traj->x_values[traj_it + 3];
+        const double &xp2 = m_traj->x_values[traj_it + 2];
+        const double &xp1 = m_traj->x_values[traj_it + 1];
+        const double &xp0 = m_traj->x_values[traj_it];
+        const double &vxp2 = (xp3 - xp2) / m_traj->durations[traj_it];
+        const double &vxp1 = (xp2 - xp1) / m_traj->durations[traj_it];
+        const double &vxp0 = (xp1 - xp0) / m_traj->durations[traj_it];
+        const double &accxp1 = (vxp2 - vxp1) / m_traj->durations[traj_it];
+        acc_x = (vxp1 - vxp0) / m_traj->durations[traj_it];
+        jerk_x = (accxp1 - acc_x) / m_traj->durations[traj_it];
+        const double &yp3 = m_traj->y_values[traj_it + 3];
+        const double &yp2 = m_traj->y_values[traj_it + 2];
+        const double &yp1 = m_traj->y_values[traj_it + 1];
+        const double &yp0 = m_traj->y_values[traj_it];
+        const double &vyp2 = (yp3 - yp2) / m_traj->durations[traj_it];
+        const double &vyp1 = (yp2 - yp1) / m_traj->durations[traj_it];
+        const double &vyp0 = (yp1 - yp0) / m_traj->durations[traj_it];
+        const double &accyp1 = (vyp2 - vyp1) / m_traj->durations[traj_it];
+        acc_y = (vyp1 - vyp0) / m_traj->durations[traj_it];
+        jerk_y = (accyp1 - acc_y) / m_traj->durations[traj_it];
     }
-    if(std::isnan(jerk_x) || std::isinf(jerk_x))
-    {
-        jerk_x = 0;
-    }
-    if(std::isnan(jerk_y) || std::isinf(jerk_y))
-    {
-        jerk_y = 0;
-    }
-    const double &acc_x = acc_linear * cos(th);
-    const double &acc_y = acc_linear * sin(th);
-    const double &v = m_traj->speeds[traj_it] + acc_linear * dt;
+    const double &v = m_traj->speeds[traj_it];
     const double &v_x = v * cos(th);
     const double &v_y = v * sin(th);
-    const double &x = m_traj->x_values[traj_it - 1] + (v * dt + acc_linear * std::pow(dt, 2) / 2) * cos(th) + jerk_x * std::pow(dt, 3) / 6;
-    const double &y = m_traj->x_values[traj_it - 1] + (v * dt + acc_linear * std::pow(dt, 2) / 2) * sin(th) + jerk_y * std::pow(dt, 3) / 6;
+    const double &x = m_traj->x_values[traj_it - 1] + v_x + acc_x * std::pow(dt, 2) / 2 + jerk_x * std::pow(dt, 3) / 6;
+    const double &y = m_traj->x_values[traj_it - 1] + v_y + acc_y * std::pow(dt, 2) / 2 + jerk_y * std::pow(dt, 3) / 6;
     return TurtlebotState(x, y, th, v, th_dot, v_x, v_y, acc_x, acc_y, jerk_x, jerk_y);
 }
 
