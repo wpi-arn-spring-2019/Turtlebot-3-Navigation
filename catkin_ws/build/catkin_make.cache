@@ -1,2 +1,0 @@
-bringup:controller:cost_map:global_planner:local_navigator:local_planner:localization:odom_ekf:turtlebot_msgs
--G CodeBlocks - Unix Makefiles -DCMAKE_BUILD_TYPE=Debug -DCATKIN_DEVEL_PREFIX=/home/suraj/Turtlebot-3-Navigation/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/suraj/Turtlebot-3-Navigation/catkin_ws/install
