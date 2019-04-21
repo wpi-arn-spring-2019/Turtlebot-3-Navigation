@@ -160,7 +160,6 @@ void Controller::control()
         m_current_time = ros::Time::now();
         const TurtlebotState &current_state = getCurrentState();
         const TurtlebotState &desired_state = getDesiredState(false);
-        const TurtlebotState &next_desired_state = getDesiredState(true);
         switch(m_cont_type)
         {
         case PD:
