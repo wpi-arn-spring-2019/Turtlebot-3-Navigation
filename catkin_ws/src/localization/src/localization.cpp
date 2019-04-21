@@ -137,7 +137,7 @@ void Localization::takeActionParticles(std::deque<Particle> &particles)
         const double &sigma_trans = std::sqrt(std::pow(xi - xf, 2) + std::pow(yi - yf, 2));
         const double &ang_bet = std::atan2(yf - yi, xf - xi);        
         tf::Quaternion q, prev_q;
-        tf::quaternionMsgToTF(m_odom_at_scan.pose.pose.orientation, q);       
+        tf::quaternionMsgToTF(m_odom_at_scan.pose.pose.orientation, q);
         tf::quaternionMsgToTF(m_odom_at_last_scan.pose.pose.orientation, prev_q);
         const double &yawi = tf::getYaw(prev_q);
         const double &yawf = tf::getYaw(q);
@@ -156,12 +156,12 @@ void Localization::takeActionParticles(std::deque<Particle> &particles)
 
 void Localization::calcParticleWeights(std::deque<Particle> &particles)
 {
-    const sensor_msgs::LaserScan &fake_scan = m_fake_scan->getFakeScan(m_prev_pose);    
+    const sensor_msgs::LaserScan &fake_scan = m_fake_scan->getFakeScan(m_prev_pose);
     tf::Pose prev_pose;
     prev_pose.setOrigin(tf::Vector3(m_prev_pose.pose.pose.position.x, m_prev_pose.pose.pose.position.y, 0));
     tf::Quaternion q;
     tf::quaternionMsgToTF(m_prev_pose.pose.pose.orientation, q);
-    prev_pose.setRotation(q);    
+    prev_pose.setRotation(q);
     tf::Pose sensor_pose_estimate = prev_pose * m_pose_icp->getTransform(fake_scan, *m_scan);
     sensor_pose_estimate.setOrigin(tf::Vector3(sensor_pose_estimate.getOrigin().getX() + m_gen_sens_x->operator ()(),
                                                sensor_pose_estimate.getOrigin().getY() + m_gen_sens_y->operator ()(),
@@ -173,10 +173,10 @@ void Localization::calcParticleWeights(std::deque<Particle> &particles)
     {
         const double &distance_score = calcDistanceScore(particle.pose.getOrigin(), sensor_pose_estimate.getOrigin());
         const double &rotation_score = calcRotationScore(particle.pose.getRotation(), sensor_pose_estimate.getRotation());
-        const double &weight = distance_score + rotation_score;        
+        const double &weight = distance_score + rotation_score;
         particle.weight = weight;
     }
-    std::sort(particles.begin(), particles.end());    
+    std::sort(particles.begin(), particles.end());
 }
 
 const double Localization::calcDistanceScore(const tf::Point &particle_pt, const tf::Point &sensor_pt)

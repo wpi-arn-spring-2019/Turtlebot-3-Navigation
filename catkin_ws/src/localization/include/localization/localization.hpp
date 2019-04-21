@@ -28,13 +28,14 @@ public:
     Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh);
     ~Localization();    
 
+    void Localize();
+
 private:    
     void laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
     void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
-    void initializeLocalization();
-    void Localize();        
+    void initializeLocalization();    
     const std::deque<Particle> sampleParticles();
     const bool checkForCollision(const Point &pt) const;
     const int getMapLocation(const Point &pt) const;
@@ -50,6 +51,7 @@ private:
     void pubFinalPose();
     std::vector<double> calcCovarianceMatrix();
     void integrateOdomToScanTime();
+    void integrateOdomToCurrentTime();
 
     ros::Subscriber m_scan_sub;
     ros::Subscriber m_odom_sub;
@@ -68,6 +70,7 @@ private:
     sensor_msgs::LaserScan m_prev_scan;
     bool m_have_scan = false;
     nav_msgs::Odometry::ConstPtr m_odom;
+    nav_msgs::Odometry m_odom_at_cur_time;
     nav_msgs::Odometry::ConstPtr m_prev_odom;
     bool m_have_odom = false;
     nav_msgs::Odometry m_odom_at_scan;
