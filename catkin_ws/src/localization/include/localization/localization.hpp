@@ -26,17 +26,15 @@ class Localization
 {
 public:
     Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh);
-    ~Localization();
-    void Localize();
+    ~Localization();    
 
-private:
+private:    
     void laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
     void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void initializeLocalization();
-    const std::vector<Point> getFreeSpace();
-    const Particle getRandomParticle(const std::vector<Point> &open_points);
+    void Localize();
     const Point getMapCoords(const int &location);
     const std::deque<Particle> sampleParticles();
     void takeActionParticles(std::deque<Particle> &particles);
@@ -79,9 +77,8 @@ private:
     bool m_have_pose_estimate = false;
 
     RandomGenerator m_rng;
-    GaussianGenerator *m_gen_s1;
+    GaussianGenerator *m_gen_s;
     GaussianGenerator *m_gen_st;
-    GaussianGenerator *m_gen_s2;
     GaussianGenerator *m_gen_sens_x;
     GaussianGenerator *m_gen_sens_y;
     GaussianGenerator *m_gen_sens_yaw;

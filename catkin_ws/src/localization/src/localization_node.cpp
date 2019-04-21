@@ -15,11 +15,7 @@ int main(int argc, char **argv)
 
     while(ros::ok)
     {
-        ros::spinOnce();
-
-        loc.Localize();
-
-        rate.sleep();
+        ros::spin();
     }
 
     return 0;
