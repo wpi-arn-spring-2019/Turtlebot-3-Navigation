@@ -77,17 +77,6 @@ void Localization::initializeLocalization()
     }
 }
 
-const Point Localization::getMapCoords(const int &location)
-{    
-    const int &height = m_map->info.height;
-    const double &origin_x = m_map->info.origin.position.x;
-    const double &origin_y = m_map->info.origin.position.y;
-    const double &resolution = m_map->info.resolution;
-    const double &x = double(location % height) * resolution + origin_x;
-    const double &y = double(int(location / height)) * resolution + origin_y;
-    return Point(x, y);
-}
-
 const std::deque<Particle> Localization::sampleParticles()
 {
     std::deque<Particle> sampled_particles;
@@ -99,12 +88,39 @@ const std::deque<Particle> Localization::sampleParticles()
             rand_sample -= particle.weight;
             if(rand_sample <= 0.0)
             {
+                const double &x = particle.pose.getOrigin().getX();
+                const double &y = particle.pose.getOrigin().getY();
+                if(checkForCollision(Point(x, y)))
+                {
+                    break;
+                }
                 sampled_particles.push_back(particle);
                 break;
             }
         }
     }
     return sampled_particles;
+}
+
+const bool Localization::checkForCollision(const Point &pt) const
+{
+    const int &location = getMapLocation(pt);
+    if(int(m_map->data[location]) == 100)
+    {
+        return true;
+    }
+    return false;
+}
+
+const int Localization::getMapLocation(const Point &pt) const
+{
+    const double &resolution = m_map->info.resolution;
+    const double &height = m_map->info.height;
+    const double &origin_x = m_map->info.origin.position.x;
+    const double &origin_y = m_map->info.origin.position.y;
+    const int &x = (pt.x - origin_x) / resolution;
+    const int &y = (pt.y - origin_y) / resolution;
+    return x + y * height;
 }
 
 void Localization::takeActionParticles(std::deque<Particle> &particles)

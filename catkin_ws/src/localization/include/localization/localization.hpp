@@ -34,9 +34,10 @@ private:
     void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void initializeLocalization();
-    void Localize();
-    const Point getMapCoords(const int &location);
+    void Localize();        
     const std::deque<Particle> sampleParticles();
+    const bool checkForCollision(const Point &pt) const;
+    const int getMapLocation(const Point &pt) const;
     void takeActionParticles(std::deque<Particle> &particles);
     void calcParticleWeights(std::deque<Particle> &particles);
     const double calcDistanceScore(const tf::Point &particle_pt, const tf::Point &sensor_pt);
