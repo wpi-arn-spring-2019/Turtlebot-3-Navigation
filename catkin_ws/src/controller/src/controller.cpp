@@ -241,7 +241,6 @@ const TurtlebotState Controller::getDesiredState(const bool &next)
         dt += m_traj->durations[traj_it];
         traj_it++;
     }
-
     const double &time_since_last_traj_pt = m_traj->durations[traj_it] + (m_current_time.toSec() - start_time - m_traj->durations[traj_it] * traj_it);
     return integrateDesiredStateToCurrentTime(traj_it, time_since_last_traj_pt);
 }
@@ -293,65 +292,52 @@ const TurtlebotState Controller::integrateDesiredStateToCurrentTime(const int &t
 
 void Controller::integratePoseToCurrentTime()
 {
-    const double &dt = ros::Duration(m_current_time - m_pose->header.stamp).toSec();
-    double acc_x = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt;
-    double acc_y = (m_odom->twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt;
-    double acc_ang = (m_odom->twist.twist.angular.z - m_prev_odom->twist.twist.angular.z) / dt;
-    if(std::isnan(acc_x) || std::isinf(acc_x))
+    ros::Duration dt = ros::Time::now() - m_odom->header.stamp;
+    const double &acc_x = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt.toSec();
+    const double &acc_y = (m_odom->twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt.toSec();
+    const double &acc_ang = (m_odom->twist.twist.angular.z - m_prev_odom->twist.twist.angular.z) / dt.toSec();
+    tf::Quaternion q_p;
+    tf::quaternionMsgToTF(m_pose->pose.pose.orientation, q_p);
+    const double &yaw = tf::getYaw(q_p);
+    const double &v_x = m_odom->twist.twist.linear.x + acc_x * dt.toSec();
+    const double &v_y = m_odom->twist.twist.linear.y + acc_y * dt.toSec();
+    const double &v_ang = m_odom->twist.twist.angular.z + acc_ang * dt.toSec();
+    const double &yaw_f = yaw + m_odom->twist.twist.linear.z * dt.toSec() + acc_ang * std::pow(dt.toSec(), 2) / 2;
+    double r = std::sqrt(std::pow(v_x, 2) + std::pow(v_y, 2)) / v_ang;
+    if(std::isnan(r) || std::isinf(r))
     {
-        acc_x = 0;
+        r = 0;
     }
-    if(std::isnan(acc_y) || std::isinf(acc_y))
-    {
-        acc_x = 0;
-    }
-    if(std::isnan(acc_ang) || std::isinf(acc_ang))
-    {
-        acc_ang = 0;
-    }
-    tf::Quaternion q;
-    tf::quaternionMsgToTF(m_odom->pose.pose.orientation, q);
-    const double &yaw = tf::getYaw(q);
-    const double &yaw_f = yaw + m_odom_at_pose.twist.twist.linear.z * dt;
-    const double &x_f = m_pose->pose.pose.position.x + (m_odom->twist.twist.linear.x * dt + acc_x * std::pow(dt, 2) / 2) * cos(yaw);
-    const double &y_f = m_pose->pose.pose.position.y + (m_odom->twist.twist.linear.y * dt + acc_y * std::pow(dt, 2) / 2) * sin(yaw);
-    tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
-    q_f.normalize();
+    const double &x_f = m_pose->pose.pose.position.x - r * sin(yaw) + r * sin(yaw_f);
+    const double &y_f = m_pose->pose.pose.position.y + r * cos(yaw) - r * cos(yaw_f);
     m_pose_at_control.pose.position.x = x_f;
     m_pose_at_control.pose.position.y = y_f;
-    geometry_msgs::Quaternion q_;
-    tf::quaternionTFToMsg(q_f, q_);
-    m_pose_at_control.pose.orientation = q_;
+    geometry_msgs::Quaternion q_f;
+    tf::quaternionTFToMsg(tf::createQuaternionFromYaw(yaw_f), q_f);
+    m_pose_at_control.pose.orientation = q_f;
 }
 
 void Controller::integrateOdomToCurrentTime()
 {
-    const double &dt = ros::Duration(m_current_time - m_odom->header.stamp).toSec();
+    ros::Duration dt = m_current_time - m_odom->header.stamp;
     m_odom_at_control.header.stamp = m_current_time;
-    double acc_x = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt;
-    double acc_y = (m_odom->twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt;
-    double acc_ang = (m_odom->twist.twist.angular.z - m_prev_odom->twist.twist.angular.z) / dt;
-    if(std::isnan(acc_x) || std::isinf(acc_x))
-    {
-        acc_x = 0;
-    }
-    if(std::isnan(acc_y) || std::isinf(acc_y))
-    {
-        acc_x = 0;
-    }
-    if(std::isnan(acc_ang) || std::isinf(acc_ang))
-    {
-        acc_ang = 0;
-    }
-    m_odom_at_control.twist.twist.linear.x = m_odom->twist.twist.linear.x + acc_x * dt;
-    m_odom_at_control.twist.twist.linear.y = m_odom->twist.twist.linear.y + acc_y * dt;
-    m_odom_at_control.twist.twist.angular.z = m_odom->twist.twist.angular.z + acc_ang * dt;
+    const double &acc_x = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt.toSec();
+    const double &acc_y = (m_odom->twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt.toSec();
+    const double &acc_ang = (m_odom->twist.twist.angular.z - m_prev_odom->twist.twist.angular.z) / dt.toSec();
+    m_odom_at_control.twist.twist.linear.x = m_odom->twist.twist.linear.x + acc_x * dt.toSec();
+    m_odom_at_control.twist.twist.linear.y = m_odom->twist.twist.linear.y + acc_y * dt.toSec();
+    m_odom_at_control.twist.twist.angular.z = m_odom->twist.twist.angular.z + acc_ang * dt.toSec();
     tf::Quaternion q;
     tf::quaternionMsgToTF(m_odom->pose.pose.orientation, q);
     const double &yaw = tf::getYaw(q);
-    const double &yaw_f = yaw + m_odom_at_control.twist.twist.linear.z * dt;
-    const double &x_f = m_odom->pose.pose.position.x + (m_odom->twist.twist.linear.x * dt + acc_x * std::pow(dt, 2) / 2) * cos(yaw);
-    const double &y_f = m_odom->pose.pose.position.y + (m_odom->twist.twist.linear.y * dt + acc_y * std::pow(dt, 2) / 2) * sin(yaw);
+    const double &yaw_f = yaw + m_odom_at_control.twist.twist.linear.z * dt.toSec();
+    double r = m_odom_at_control.twist.twist.linear.x / m_odom_at_control.twist.twist.angular.z;
+    if(std::isnan(r) || std::isinf(r))
+    {
+        r = 0;
+    }
+    const double &x_f = m_odom->pose.pose.position.x - r * sin(yaw) + r * sin(yaw_f);
+    const double &y_f = m_odom->pose.pose.position.y + r * cos(yaw) - r * cos(yaw_f);
     tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
     q_f.normalize();
     m_odom_at_control.pose.pose.position.x = x_f;
