@@ -419,8 +419,8 @@ void Localization::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
         m_gen_sens_yaw = new GaussianGenerator(m_rng, sens_yaw);
     }
     m_prev_odom = m_odom;
-    const double &cov_trans = std::sqrt(msg->pose.covariance[0] / 50 + msg->pose.covariance[7] / 50);
-    const double &cov_rot = std::sqrt(msg->pose.covariance[35] / 50);
+    const double &cov_trans = std::sqrt(msg->pose.covariance[0] / 10 + msg->pose.covariance[7] / 10);
+    const double &cov_rot = std::sqrt(msg->pose.covariance[35] / 10);
     const double &cov_sigma_rot = cov_rot + cov_trans;
     const double &cov_sigma_trans = cov_trans + 2 * cov_rot;
     GaussianDistribution s(0.0, cov_sigma_rot);
