@@ -4,12 +4,12 @@
 #PID_FF: 3
 #DFL: 4
 
-controller_type: 2
+controller_type: 0
 
-kp_w_pd: 1
-kd_w_pd: 0.2
-kp_v_pd: 1
-kd_v_pd: 0.1
+kp_w_pd: 5
+kd_w_pd: 0.5
+kp_v_pd: 5
+kd_v_pd: 0.2
 
 kp_w_pid: 1
 ki_w_pid: 0.001
