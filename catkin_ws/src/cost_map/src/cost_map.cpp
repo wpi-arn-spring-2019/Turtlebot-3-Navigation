@@ -7,21 +7,21 @@ namespace Turtlebot
 
 CostMap::CostMap(ros::NodeHandle &nh, ros::NodeHandle &pnh)
 {
-    ROS_INFO("cost_map_node initiated");
+//    ROS_INFO("cost_map_node initiated");
     map_sub = nh.subscribe<nav_msgs::OccupancyGrid>("/map",10,&CostMap::mapCallback,this);
-    ROS_INFO("map has been subscribed");
+//    ROS_INFO("map has been subscribed");
     current_scan_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 10, &CostMap::currentScanCallback, this);
-    ROS_INFO("scan has been subscribed");
-    ROS_INFO("commit");
+//    ROS_INFO("scan has been subscribed");
+//    ROS_INFO("commit");
 
     cost_map_pub = nh.advertise<nav_msgs::OccupancyGrid>("/cost_map",10);
-    ROS_INFO("Able to publish cost map to the topic cost_map now");
+//    ROS_INFO("Able to publish cost map to the topic cost_map now");
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &CostMap::odomCallback, this);
 
     current_pose_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/pf_pose",10,&CostMap::currentPoseCallback, this);
 
 
-    ROS_INFO("pf pose has been subscribed");
+//    ROS_INFO("pf pose has been subscribed");
 
 }
 
@@ -35,7 +35,7 @@ void CostMap::mapCallback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
     m_have_map = true;
     m_map = msg;
     cost_map = *msg;
-    ROS_INFO("CALLBACK map");
+//    ROS_INFO("CALLBACK map");
 
 //    for (int i=0; i<cost_map.data.size(); i++)
 //    {
@@ -57,7 +57,7 @@ void CostMap::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
     {
         m_have_odom = true;
         m_prev_odom = msg;
-        ROS_INFO("CALLBACK odom");
+//        ROS_INFO("CALLBACK odom");
     }
     m_odom = msg;
 }
@@ -70,7 +70,7 @@ void CostMap::currentScanCallback(const sensor_msgs::LaserScan::ConstPtr &msg)
     {
         m_have_scan = true;
         m_prev_scan = *msg;
-        ROS_INFO("CALLBACK scan");
+//        ROS_INFO("CALLBACK scan");
 
         m_fake_scan = new FakeScan(*m_map, *msg);
 //        ROS_INFO("first scan is gone to m_prev scan");
@@ -108,7 +108,7 @@ void CostMap::currentPoseCallback(const geometry_msgs::PoseWithCovarianceStamped
    current_tf_pose.setOrigin(tf::Vector3(current_pose.pose.pose.position.x, current_pose.pose.pose.position.y, 0));
    current_tf_pose.setRotation(tf::createQuaternionFromYaw(actual_yaw));
 
-   ROS_INFO("current pose before 1 %d %d ",int(current_pose.pose.pose.position.x),int(current_pose.pose.pose.position.y));
+//   ROS_INFO("current pose before 1 %d %d ",int(current_pose.pose.pose.position.x),int(current_pose.pose.pose.position.y));
    integratePoseToCurrentTime(current_tf_pose);
 
    referance_scan = m_fake_scan->getFakeScan(current_pose);
@@ -117,14 +117,14 @@ void CostMap::currentPoseCallback(const geometry_msgs::PoseWithCovarianceStamped
 //    ROS_INFO("ranges position %f",referance_scan.ranges[i]);
 //  }
 
-    ROS_INFO("y x width index_num %d %d %d %d",current_grid_x,current_grid_y,cost_map.info.width, map_index_num);
+//    ROS_INFO("y x width index_num %d %d %d %d",current_grid_x,current_grid_y,cost_map.info.width, map_index_num);
 //   cost_map.data[int((192+8)*cost_map.info.width + (152+8))] = 100;
 //      cost_map.data[int((152)*cost_map.info.width + (192))] = 100;
 //      cost_map.data[int((152)*cost_map.info.width + (192))] = 100;
 //      cost_map.data[int((152)*cost_map.info.width + (192))] = 100;
 //   cost_map_pub.publish(cost_map);
      cost_map_pub.publish(cost_map);
-    ROS_INFO("cost map value %d",cost_map.data[map_index_num]);
+//    ROS_INFO("cost map value %d",cost_map.data[map_index_num]);
     if(cost_map.data[map_index_num]!= -1)
     {
 //      ROS_INFO("cost map pixel value %d",cost_map.data[map_index_num]);
@@ -139,7 +139,7 @@ void CostMap::currentPoseCallback(const geometry_msgs::PoseWithCovarianceStamped
 
 void CostMap::generateCostMap()
 {
- ROS_INFO("new current pose 4444444444444 ");
+// ROS_INFO("new current pose 4444444444444 ");
     for (int i=0 ; i< m_scan->ranges.size(); i++)
     {
 
@@ -226,7 +226,7 @@ void CostMap::clearCostMap()
 
 void CostMap::integrateOdomToScanTime()
 {
-    ROS_INFO("integrate odom to scan 0 ");
+//    ROS_INFO("integrate odom to scan 0 ");
 
 //    ROS_INFO("integrate odom to scan 0 %d %d ",m_scan->header.stamp,m_odom->header.stamp);
     ros::Duration dt = m_scan->header.stamp - m_odom->header.stamp;
@@ -279,7 +279,7 @@ void CostMap::integrateOdomToScanTime()
 
 void CostMap::integratePoseToCurrentTime(tf::Pose &pose)
 {
-    ROS_INFO("INTEGRATE POSE TO TIME 0");
+//    ROS_INFO("INTEGRATE POSE TO TIME 0");
     ros::Duration dt = ros::Time::now() - m_odom_at_scan.header.stamp;
 //    ROS_INFO("INTEGRATE POSE TO TIME 1");
     const double &acc_x = (m_odom_at_scan.twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt.toSec();
@@ -318,7 +318,7 @@ void CostMap::integratePoseToCurrentTime(tf::Pose &pose)
     current_pose.pose.pose.position.y = y_f;
 //    ROS_INFO("INTEGRATE POSE TO TIME 7");
     tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
-    ROS_INFO("INTEGRATE POSE TO TIME 8");
+//    ROS_INFO("INTEGRATE POSE TO TIME 8");
     current_pose.pose.pose.orientation.w = q_f.w();
     current_pose.pose.pose.orientation.x = q_f.x();
     current_pose.pose.pose.orientation.y = q_f.y();
@@ -330,7 +330,6 @@ void CostMap::integratePoseToCurrentTime(tf::Pose &pose)
 
 
 }
-
 
 
 }
