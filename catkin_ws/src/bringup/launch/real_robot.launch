@@ -25,7 +25,7 @@
   <include file="$(find local_planner)/launch/local_planner.launch"/>
 
   <!-- Controller -->
-  <include file="$(find controller)/launch/controller.launch"/>
+  <include file="$(find controller)/launch/controller_real.launch"/>
 
 
 </launch>

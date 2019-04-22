@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
     <node name="controller_node" pkg="controller" type="controller_node" output="screen">
-        <rosparam command="load" file="$(find controller)/params/controller_params.yaml"/>
+        <rosparam command="load" file="$(find controller)/params/controller_params_sim.yaml"/>
     </node>
 </launch>
