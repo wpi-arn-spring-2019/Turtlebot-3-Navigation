@@ -28,10 +28,10 @@ const geometry_msgs::TwistStamped DYNController::getControls(const TurtlebotStat
     geometry_msgs::TwistStamped control;
     control.header.stamp = current_time;
 
-    ROS_INFO("current position in X = %If , desired position in X = %If , error in X = %If "   , current_state.x , desired_state.x , current_state.x - desired_state.x );
-    ROS_INFO("current position in Y = %If , desired position in Y = %If , error in Y = %If \n" , current_state.y , desired_state.y , current_state.y - desired_state.y );
+//    ROS_INFO("current position in X = %If , desired position in X = %If , error in X = %If "   , current_state.x , desired_state.x , current_state.x - desired_state.x );
+//    ROS_INFO("current position in Y = %If , desired position in Y = %If , error in Y = %If \n" , current_state.y , desired_state.y , current_state.y - desired_state.y );
 
-//    ROS_INFO("current velocity in X = %If , current velocity in Y = %If" , current_state.x_dot , current_state.y_dot );
+////    ROS_INFO("current velocity in X = %If , current velocity in Y = %If" , current_state.x_dot , current_state.y_dot );
 //    ROS_INFO("desired velocity in X = %If , desired velocity in Y = %If \n" , desired_state.x_dot , desired_state.y_dot );
 
 //    ROS_INFO("current accleration in X = %If , current acceleration in Y = %If" , current_state.x_ddot , current_state.y_ddot );
@@ -49,6 +49,10 @@ const geometry_msgs::TwistStamped DYNController::getControls(const TurtlebotStat
 
     const double &cur_jerk_x = des_jerk_x - m_lam2_dyn_fed_lin*error_acc_x  - m_lam1_dyn_fed_lin*error_vel_x - m_lam0_dyn_fed_lin*error_dist_x ;
     const double &cur_jerk_y = des_jerk_y - m_lam2_dyn_fed_lin*error_acc_y  - m_lam1_dyn_fed_lin*error_vel_y - m_lam0_dyn_fed_lin*error_dist_y ;
+
+//        ROS_INFO("current Jerk in X = %If , current Jerk in Y = %If" , cur_jerk_x , cur_jerk_y );
+//        ROS_INFO("desired jerk in X = %If , desired jerk in Y = %If \n\n" , des_jerk_x , des_jerk_y );
+
 
     double input_vel_x = current_state.x_dot + current_state.x_ddot*dt + cur_jerk_x*dt*dt/2;
     double input_vel_y = current_state.y_dot + current_state.y_ddot*dt + cur_jerk_y*dt*dt/2;
