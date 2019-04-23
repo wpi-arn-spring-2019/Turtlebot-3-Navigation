@@ -169,7 +169,7 @@ void CostMap::generateCostMap()
             int pix_y = (current_grid_y+200) + int((ray_dist * sin(angle))/0.05);
 //ROS_INFO("pix_x pix_y m_scan Range ray_Distance %d %d %f %f ",pix_x,pix_y,m_scan->ranges[i],ray_dist);
 
-            if((m_map->data[(pix_y*cost_map.info.width + pix_x)])!= 100)
+            if((m_map->data[(pix_y*cost_map.info.width + pix_x)])!= 100 && (cost_map.data[(pix_y*cost_map.info.width + pix_x)])== 100)
             {
             cost_map.data[(pix_y*cost_map.info.width + pix_x)] = 0;
             }
