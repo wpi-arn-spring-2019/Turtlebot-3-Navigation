@@ -173,7 +173,6 @@ void Controller::control()
         case PD_FF:
             pubControls(m_pd_ff_cont->getControls(current_state, desired_state));
             m_error_pub.publish(m_pd_ff_cont->m_pose_error);
-
             break;
         case PID_FF:
             pubControls(m_pid_ff_cont->getControls(current_state, desired_state));
