@@ -35,7 +35,7 @@
   <include file="$(find localization)/launch/localization.launch"/>
 
   <!--Costmap-->
-  <include file="$(find cost_map)/launch/cost_map.launch"/>
+<!--  <include file="$(find cost_map)/launch/cost_map.launch"/>-->
 
 <!-- Global Planner-->
   <include file="$(find global_planner)/launch/global_planner.launch"/>-->

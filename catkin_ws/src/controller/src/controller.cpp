@@ -211,8 +211,8 @@ const TurtlebotState Controller::getCurrentState()
     const double &v = std::sqrt(std::pow(m_odom_at_control.twist.twist.linear.x, 2)+
                                 std::pow(m_odom_at_control.twist.twist.linear.y, 2));
     const double &th_dot = m_odom_at_control.twist.twist.angular.z;
-    const double &x_dot = m_odom_at_control.twist.twist.linear.x;
-    const double &y_dot = m_odom_at_control.twist.twist.linear.y;
+    const double &x_dot = m_odom_at_control.twist.twist.linear.x * cos(th);
+    const double &y_dot = m_odom_at_control.twist.twist.linear.x * sin(th);
     const double &dt_prev = ros::Duration(m_odom->header.stamp - m_prev_odom->header.stamp).toSec();
     const double &x_ddot = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt_prev;
     const double &y_ddot = (m_odom->twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt_prev;
