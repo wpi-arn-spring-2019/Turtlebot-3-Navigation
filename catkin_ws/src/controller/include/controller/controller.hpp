@@ -43,7 +43,7 @@ private:
     void initializeController(ros::NodeHandle &pnh);
     void getGains(ros::NodeHandle &pnh);
     const TurtlebotState getCurrentState();
-    const TurtlebotState getDesiredState(const bool &next);
+    const TurtlebotState getDesiredState();
     const TurtlebotState integrateDesiredStateToCurrentTime(const int &traj_it, const double &dt) const;
     void integratePoseToCurrentTime();
     void integrateOdomToCurrentTime();

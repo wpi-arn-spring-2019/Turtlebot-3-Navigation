@@ -159,7 +159,7 @@ void Controller::control()
     {
         m_current_time = ros::Time::now();
         const TurtlebotState &current_state = getCurrentState();
-        const TurtlebotState &desired_state = getDesiredState(false);
+        const TurtlebotState &desired_state = getDesiredState();
         switch(m_cont_type)
         {
         case PD:
@@ -222,15 +222,11 @@ const TurtlebotState Controller::getCurrentState()
     return TurtlebotState(x, y, th, v, th_dot, x_dot, y_dot, x_ddot, y_ddot, x_dddot, y_dddot);
 }
 
-const TurtlebotState Controller::getDesiredState(const bool &next)
+const TurtlebotState Controller::getDesiredState()
 {
     const double &start_time = m_traj->header.stamp.toSec();    
     int traj_it = 0;    
     double dt = start_time - m_current_time.toSec();
-    if(next)
-    {
-        dt -= 1 / m_rate;
-    }
     while(dt <= 0)
     {
         if(traj_it >= m_traj->durations.size() && !m_goal_reached)
