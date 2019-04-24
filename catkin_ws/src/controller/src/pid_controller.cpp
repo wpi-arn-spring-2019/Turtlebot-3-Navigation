@@ -54,6 +54,14 @@ const geometry_msgs::TwistStamped PIDController::getControls(const TurtlebotStat
 
 
     m_pose_error.header.stamp = ros::Time::now();
+
+    m_pose_error.cur_lin_vel = current_state.v;
+    m_pose_error.cur_ang_vel = current_state.th_dot;
+    m_pose_error.des_lin_vel = desired_state.v;
+    m_pose_error.des_ang_vel = desired_state.th_dot;
+    m_pose_error.err_lin_vel = error_v;
+    m_pose_error.err_ang_vel = error_w;
+
     m_pose_error.cur_pos_x = current_state.x;
     m_pose_error.des_pos_x = desired_state.x ;
     m_pose_error.err_pos_x = desired_state.x - current_state.x ;
