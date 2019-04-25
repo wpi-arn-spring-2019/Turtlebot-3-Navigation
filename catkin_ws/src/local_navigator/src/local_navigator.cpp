@@ -234,8 +234,8 @@ void LocalNavigator::integrateOdomToCurrentTime()
     tf::quaternionMsgToTF(m_odom->pose.pose.orientation, q);
     const double &yaw = tf::getYaw(q);
     const double &yaw_f = yaw + m_odom_at_cur_time.twist.twist.linear.z * dt;
-    const double &x_f = m_odom->pose.pose.position.x + (m_odom->twist.twist.linear.x * dt + acc_x * std::pow(dt, 2) / 2) * cos(yaw);
-    const double &y_f = m_odom->pose.pose.position.y + (m_odom->twist.twist.linear.y * dt + acc_y * std::pow(dt, 2) / 2) * sin(yaw);
+    const double &x_f = m_odom->pose.pose.position.x + (m_odom->twist.twist.linear.x * cos(yaw) * dt + acc_x * std::pow(dt, 2) / 2) * cos(yaw);
+    const double &y_f = m_odom->pose.pose.position.y + (m_odom->twist.twist.linear.x * sin(yaw) * dt + acc_y * std::pow(dt, 2) / 2) * sin(yaw);
     tf::Quaternion q_f = tf::createQuaternionFromYaw(yaw_f);
     q_f.normalize();
     m_odom_at_cur_time.pose.pose.position.x = x_f;
