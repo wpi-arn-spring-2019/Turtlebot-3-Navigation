@@ -281,7 +281,7 @@ const TurtlebotState Controller::integrateDesiredStateToCurrentTime(const int &t
     const double &v_x = v * cos(th);
     const double &v_y = v * sin(th);
     const double &x = m_traj->x_values[traj_it - 1] + v_x + acc_x * std::pow(dt, 2) / 2 + jerk_x * std::pow(dt, 3) / 6;
-    const double &y = m_traj->x_values[traj_it - 1] + v_y + acc_y * std::pow(dt, 2) / 2 + jerk_y * std::pow(dt, 3) / 6;
+    const double &y = m_traj->y_values[traj_it - 1] + v_y + acc_y * std::pow(dt, 2) / 2 + jerk_y * std::pow(dt, 3) / 6;
     return TurtlebotState(x, y, th, v, th_dot, v_x, v_y, acc_x, acc_y, jerk_x, jerk_y);
 }
 
