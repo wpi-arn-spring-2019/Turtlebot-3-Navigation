@@ -50,8 +50,8 @@ const geometry_msgs::TwistStamped DYNController::getControls(const TurtlebotStat
     const double &cur_jerk_x = des_jerk_x - m_lam2_dyn_fed_lin*error_acc_x  - m_lam1_dyn_fed_lin*error_vel_x - m_lam0_dyn_fed_lin*error_dist_x ;
     const double &cur_jerk_y = des_jerk_y - m_lam2_dyn_fed_lin*error_acc_y  - m_lam1_dyn_fed_lin*error_vel_y - m_lam0_dyn_fed_lin*error_dist_y ;
 
-//        ROS_INFO("current Jerk in X = %If , current Jerk in Y = %If" , cur_jerk_x , cur_jerk_y );
-//        ROS_INFO("desired jerk in X = %If , desired jerk in Y = %If \n\n" , des_jerk_x , des_jerk_y );
+        ROS_INFO("current Jerk in X = %If , current Jerk in Y = %If" , cur_jerk_x , cur_jerk_y );
+        ROS_INFO("desired jerk in X = %If , desired jerk in Y = %If \n\n" , des_jerk_x , des_jerk_y );
 
 
     double input_vel_x = current_state.x_dot + current_state.x_ddot*dt + cur_jerk_x*dt*dt/2;
