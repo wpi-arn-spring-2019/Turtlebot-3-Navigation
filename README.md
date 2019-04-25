@@ -13,4 +13,6 @@ simulation: roslaunch bringup full_sim.launch
 
 real robot: roslaunch bringup real_robot.launch
 
+not: real robot is configured to load custom real map, change this in real_robot.launch to load a different map
+
 give a 2d pose estimate in rviz, then a 2d nav goal
