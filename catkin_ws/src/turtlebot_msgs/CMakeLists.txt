@@ -10,7 +10,11 @@ add_message_files(
   FILES
   GoalPose.msg
   Trajectory.msg
-  Tune.msg
+  cntrl_acc.msg
+  cntrl_vel.msg
+  cntrl_lin_vel.msg
+  cntrl_ang_vel.msg
+  cntrl_pos.msg
 )
 
 generate_messages(

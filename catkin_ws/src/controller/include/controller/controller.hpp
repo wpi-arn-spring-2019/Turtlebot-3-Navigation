@@ -13,8 +13,12 @@
 #include <std_msgs/Bool.h>
 #include <tf/tf.h>
 #include <turtlebot_msgs/Trajectory.h>
-#include <turtlebot_msgs/Tune.h>
 #include <turtlebot_state.hpp>
+#include <turtlebot_msgs/cntrl_acc.h>
+#include <turtlebot_msgs/cntrl_vel.h>
+#include <turtlebot_msgs/cntrl_lin_vel.h>
+#include <turtlebot_msgs/cntrl_ang_vel.h>
+#include <turtlebot_msgs/cntrl_pos.h>
 
 
 namespace Turtlebot
@@ -28,7 +32,11 @@ public:
     void control();
 
 
-    ros::Publisher m_error_pub;
+    ros::Publisher m_error_pos_pub;
+    ros::Publisher m_error_vel_pub;
+    ros::Publisher m_error_acc_pub;
+    ros::Publisher m_error_lin_vel_pub;
+    ros::Publisher m_error_ang_vel_pub;
 
 
 private:

@@ -2,7 +2,12 @@
 #include <ros/ros.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <turtlebot_state.hpp>
-#include <turtlebot_msgs/Tune.h>
+#include <turtlebot_msgs/cntrl_acc.h>
+#include <turtlebot_msgs/cntrl_vel.h>
+#include <turtlebot_msgs/cntrl_lin_vel.h>
+#include <turtlebot_msgs/cntrl_ang_vel.h>
+#include <turtlebot_msgs/cntrl_pos.h>
+
 namespace Turtlebot
 {
 
@@ -15,7 +20,13 @@ public:
     const geometry_msgs::TwistStamped getControls(const TurtlebotState &current_state, const TurtlebotState &desired_state);
     void setGains(const double &kp_w, const double &kd_w,
                   const double &kp_v, const double &kd_v);
-    turtlebot_msgs::Tune m_pose_error ;
+
+    turtlebot_msgs::cntrl_acc m_acc_error ;
+    turtlebot_msgs::cntrl_vel m_vel_error ;
+    turtlebot_msgs::cntrl_pos m_pos_error ;
+    turtlebot_msgs::cntrl_lin_vel m_lin_vel_error ;
+    turtlebot_msgs::cntrl_ang_vel m_ang_vel_error ;
+
     double err_pos_x ; double err_pos_y ; double err_vel_x ;
     double err_vel_y ; double err_acc_x ; double err_acc_y ;
 

@@ -22,7 +22,11 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &
     m_server->setCallback(m_call_type);
     initializeController(pnh);
 
-    m_error_pub = nh.advertise<turtlebot_msgs::Tune>("/pos_error_pose", 10);
+    m_error_pos_pub = nh.advertise<turtlebot_msgs::cntrl_pos>("/error_pos_pub", 10);
+    m_error_vel_pub = nh.advertise<turtlebot_msgs::cntrl_vel>("/error_vel_pub", 10);
+    m_error_acc_pub = nh.advertise<turtlebot_msgs::cntrl_acc>("/error_acc_pub", 10);
+    m_error_lin_vel_pub = nh.advertise<turtlebot_msgs::cntrl_lin_vel>("/error_lin_vel_pub", 10);
+    m_error_ang_vel_pub = nh.advertise<turtlebot_msgs::cntrl_ang_vel>("/error_ang_vel_pub", 10);
 
 }
 
@@ -116,7 +120,7 @@ void Controller::initializeController(ros::NodeHandle &pnh)
     }
     else
     {
-        ROS_ERROR("Invalid Controller Type Specified. Options Are: pd, pid, pd_ff, pid_ff");
+        ROS_ERROR("Invalid Controller Type Specified. Options Are: pd, pid, pd_ff, pid_ff, Dyn_feed_lin");
     }
     boost::recursive_mutex::scoped_lock lock(m_config_mutex);
     m_server->updateConfig(m_config);
@@ -164,23 +168,53 @@ void Controller::control()
         {
         case PD:
             pubControls(m_pd_cont->getControls(current_state, desired_state));
-            m_error_pub.publish(m_pd_cont->m_pose_error);
+
+            m_error_pos_pub.publish(m_pd_cont->m_pos_error);
+            m_error_vel_pub.publish(m_pd_cont->m_vel_error);
+            m_error_acc_pub.publish(m_pd_cont->m_acc_error);
+            m_error_lin_vel_pub.publish(m_pd_cont->m_lin_vel_error);
+            m_error_ang_vel_pub.publish(m_pd_cont->m_ang_vel_error);
+
             break;
         case PID:
             pubControls(m_pid_cont->getControls(current_state, desired_state));
-            m_error_pub.publish(m_pid_cont->m_pose_error);
+
+            m_error_pos_pub.publish(m_pid_cont->m_pos_error);
+            m_error_vel_pub.publish(m_pid_cont->m_vel_error);
+            m_error_acc_pub.publish(m_pid_cont->m_acc_error);
+            m_error_lin_vel_pub.publish(m_pid_cont->m_lin_vel_error);
+            m_error_ang_vel_pub.publish(m_pid_cont->m_ang_vel_error);
+
             break;
         case PD_FF:
             pubControls(m_pd_ff_cont->getControls(current_state, desired_state));
-            m_error_pub.publish(m_pd_ff_cont->m_pose_error);
+
+            m_error_pos_pub.publish(m_pd_ff_cont->m_pos_error);
+            m_error_vel_pub.publish(m_pd_ff_cont->m_vel_error);
+            m_error_acc_pub.publish(m_pd_ff_cont->m_acc_error);
+            m_error_lin_vel_pub.publish(m_pd_ff_cont->m_lin_vel_error);
+            m_error_ang_vel_pub.publish(m_pd_ff_cont->m_ang_vel_error);
+
             break;
         case PID_FF:
             pubControls(m_pid_ff_cont->getControls(current_state, desired_state));
-            m_error_pub.publish(m_pid_ff_cont->m_pose_error);
+
+            m_error_pos_pub.publish(m_pid_ff_cont->m_pos_error);
+            m_error_vel_pub.publish(m_pid_ff_cont->m_vel_error);
+            m_error_acc_pub.publish(m_pid_ff_cont->m_acc_error);
+            m_error_lin_vel_pub.publish(m_pid_ff_cont->m_lin_vel_error);
+            m_error_ang_vel_pub.publish(m_pid_ff_cont->m_ang_vel_error);
+
             break;
         case DFL:
             pubControls(m_dfl_cont->getControls(current_state, desired_state));
-            m_error_pub.publish(m_dfl_cont->m_pose_error);
+
+            m_error_pos_pub.publish(m_dfl_cont->m_pos_error);
+            m_error_vel_pub.publish(m_dfl_cont->m_vel_error);
+            m_error_acc_pub.publish(m_dfl_cont->m_acc_error);
+            m_error_lin_vel_pub.publish(m_dfl_cont->m_lin_vel_error);
+            m_error_ang_vel_pub.publish(m_dfl_cont->m_ang_vel_error);
+
             break;
         }
     }
@@ -216,8 +250,8 @@ const TurtlebotState Controller::getCurrentState()
     const double &x_ddot = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) * cos(th) / dt_prev;
     const double &y_ddot = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) * sin(th) / dt_prev;
     const double &dt_prev_prev = ros::Duration(m_prev_odom->header.stamp - m_prev_prev_odom->header.stamp).toSec();
-    const double &x_dddot = (x_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) * cos(th) / dt_prev_prev) / (dt_prev_prev+dt_prev_prev);
-    const double &y_dddot = (y_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) * sin(th) / dt_prev_prev) / (dt_prev_prev+dt_prev_prev);
+    const double &x_dddot = (x_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) * cos(th) / dt_prev_prev) / (dt_prev+dt_prev_prev);
+    const double &y_dddot = (y_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) * sin(th) / dt_prev_prev) / (dt_prev+dt_prev_prev);
     return TurtlebotState(x, y, th, v, th_dot, x_dot, y_dot, x_ddot, y_ddot, x_dddot, y_dddot);
 }
 

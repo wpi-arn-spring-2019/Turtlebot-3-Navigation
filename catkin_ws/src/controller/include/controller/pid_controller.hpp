@@ -2,7 +2,12 @@
 #include <ros/ros.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <turtlebot_state.hpp>
-#include <turtlebot_msgs/Tune.h>
+#include <turtlebot_msgs/cntrl_acc.h>
+#include <turtlebot_msgs/cntrl_vel.h>
+#include <turtlebot_msgs/cntrl_lin_vel.h>
+#include <turtlebot_msgs/cntrl_ang_vel.h>
+#include <turtlebot_msgs/cntrl_pos.h>
+
 
 namespace Turtlebot
 {
@@ -20,7 +25,12 @@ public:
     double err_pos_x ; double err_pos_y ; double err_vel_x ;
     double err_vel_y ; double err_acc_x ; double err_acc_y ;
 
-    turtlebot_msgs::Tune m_pose_error ;
+    turtlebot_msgs::cntrl_acc m_acc_error ;
+    turtlebot_msgs::cntrl_vel m_vel_error ;
+    turtlebot_msgs::cntrl_pos m_pos_error ;
+    turtlebot_msgs::cntrl_lin_vel m_lin_vel_error ;
+    turtlebot_msgs::cntrl_ang_vel m_ang_vel_error ;
+
 private:
 
     ros::Time m_prev_time;
