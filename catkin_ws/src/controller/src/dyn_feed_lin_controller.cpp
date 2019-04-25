@@ -59,8 +59,8 @@ const geometry_msgs::TwistStamped DYNController::getControls(const TurtlebotStat
 
     double input_vel = std::sqrt(std::pow(input_vel_x, 2) + std::pow(input_vel_y, 2));
 
-    double radius_curv = (std::pow((current_state.x_dot*current_state.x_dot +current_state.y_dot*current_state.y_dot), 1.5))/
-            (current_state.x_dot*current_state.y_ddot - current_state.y_dot*current_state.x_ddot) ;
+    double radius_curv = (std::pow((desired_state.x_dot*desired_state.x_dot +desired_state.y_dot*desired_state.y_dot), 1.5))/
+            (desired_state.x_dot*desired_state.y_ddot - desired_state.y_dot*desired_state.x_ddot) ;
 
     double input_ang_vel = input_vel / radius_curv;
 

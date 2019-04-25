@@ -216,8 +216,8 @@ const TurtlebotState Controller::getCurrentState()
     const double &x_ddot = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) * cos(th) / dt_prev;
     const double &y_ddot = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) * sin(th) / dt_prev;
     const double &dt_prev_prev = ros::Duration(m_prev_odom->header.stamp - m_prev_prev_odom->header.stamp).toSec();
-    const double &x_dddot = (x_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) * cos(th) / dt_prev_prev) / dt_prev_prev;
-    const double &y_dddot = (y_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) * sin(th) / dt_prev_prev) / dt_prev_prev;
+    const double &x_dddot = (x_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) * cos(th) / dt_prev_prev) / (dt_prev_prev+dt_prev_prev);
+    const double &y_dddot = (y_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) * sin(th) / dt_prev_prev) / (dt_prev_prev+dt_prev_prev);
     return TurtlebotState(x, y, th, v, th_dot, x_dot, y_dot, x_ddot, y_ddot, x_dddot, y_dddot);
 }
 
