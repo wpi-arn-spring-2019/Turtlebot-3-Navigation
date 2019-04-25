@@ -289,12 +289,12 @@ void Localization::pubParticles()
 void Localization::integratePoseToCurrentTime(tf::Pose &pose)
 {
     ros::Duration dt = ros::Time::now() - m_odom_at_scan.header.stamp;
-    const double &acc_x = (m_odom_at_scan.twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt.toSec();
-    const double &acc_y = (m_odom_at_scan.twist.twist.linear.y - m_prev_odom->twist.twist.linear.y) / dt.toSec();
     const double &acc_ang = (m_odom_at_scan.twist.twist.angular.z - m_prev_odom->twist.twist.angular.z) / dt.toSec();
     const double &yaw = tf::getYaw(pose.getRotation());
-    const double &v_x = m_odom_at_scan.twist.twist.linear.x + acc_x * dt.toSec();
-    const double &v_y = m_odom_at_scan.twist.twist.linear.y + acc_y * dt.toSec();
+    const double &acc_x = (m_odom_at_scan.twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) * cos(yaw) / dt.toSec();
+    const double &acc_y = (m_odom_at_scan.twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) * sin(yaw) / dt.toSec();
+    const double &v_x = m_odom_at_scan.twist.twist.linear.x * cos(yaw) + acc_x * dt.toSec();
+    const double &v_y = m_odom_at_scan.twist.twist.linear.x * sin(yaw) + acc_y * dt.toSec();
     const double &v_ang = m_odom_at_scan.twist.twist.angular.z + acc_ang * dt.toSec();
     const double &yaw_f = yaw + m_odom_at_scan.twist.twist.linear.z * dt.toSec() + acc_ang * std::pow(dt.toSec(), 2) / 2;
     double r = std::sqrt(std::pow(v_x, 2) + std::pow(v_y, 2)) / v_ang;
