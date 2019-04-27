@@ -18,7 +18,7 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &
     m_kp_gains_v.resize(5);
     m_ki_gains_v.resize(5);
     m_kd_gains_v.resize(5);
-    m_dfl_gains.resize(6);
+    m_dfl_gains.resize(2);
     m_server->setCallback(m_call_type);
     initializeController(pnh);
 
@@ -119,14 +119,9 @@ void Controller::initializeController(ros::NodeHandle &pnh)
         m_config.controller_type = type;
         m_config.lam0 = m_dfl_gains[0];
         m_config.lam1 = m_dfl_gains[1];
-        m_config.lam2 = m_dfl_gains[2];
-        m_config.gam0 = m_dfl_gains[3];
-        m_config.gam1 = m_dfl_gains[4];
-        m_config.gam2 = m_dfl_gains[5];
         m_cont_type = controller_type::DFL;
         m_dfl_cont = new DYNController();
-        m_dfl_cont->setGains(m_dfl_gains[0], m_dfl_gains[1], m_dfl_gains[2],
-                             m_dfl_gains[3], m_dfl_gains[4], m_dfl_gains[5]);
+        m_dfl_cont->setGains(m_dfl_gains[0], m_dfl_gains[1]);
     }
     else
     {
@@ -161,10 +156,6 @@ void Controller::getGains(ros::NodeHandle &pnh)
     pnh.getParam("kd_v_pid_ff", m_kd_gains_v[3]);
     pnh.getParam("lam0_dyn_fed_lin", m_dfl_gains[0]);
     pnh.getParam("lam1_dyn_fed_lin", m_dfl_gains[1]);
-    pnh.getParam("lam2_dyn_fed_lin", m_dfl_gains[2]);
-    pnh.getParam("gam0_dyn_fed_lin", m_dfl_gains[3]);
-    pnh.getParam("gam1_dyn_fed_lin", m_dfl_gains[4]);
-    pnh.getParam("gam2_dyn_fed_lin", m_dfl_gains[5]);
 }
 
 void Controller::control()
@@ -254,15 +245,12 @@ const TurtlebotState Controller::getCurrentState()
     const double &v = std::sqrt(std::pow(m_odom_at_control.twist.twist.linear.x, 2)+
                                 std::pow(m_odom_at_control.twist.twist.linear.y, 2));
     const double &th_dot = m_odom_at_control.twist.twist.angular.z;
-    const double &x_dot = m_odom_at_control.twist.twist.linear.x * cos(th);
-    const double &y_dot = m_odom_at_control.twist.twist.linear.x * sin(th);
+    const double &x_dot = v * cos(th);
+    const double &y_dot = v * sin(th);
     const double &dt_prev = ros::Duration(m_odom->header.stamp - m_prev_odom->header.stamp).toSec();
     const double &x_ddot = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) * cos(th) / dt_prev;
     const double &y_ddot = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) * sin(th) / dt_prev;
-    const double &dt_prev_prev = ros::Duration(m_prev_odom->header.stamp - m_prev_prev_odom->header.stamp).toSec();
-    const double &x_dddot = (x_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) * cos(th) / dt_prev_prev) / (dt_prev+dt_prev_prev);
-    const double &y_dddot = (y_ddot - (m_prev_odom->twist.twist.linear.x - m_prev_prev_odom->twist.twist.linear.x) * sin(th) / dt_prev_prev) / (dt_prev+dt_prev_prev);
-    return TurtlebotState(x, y, th, v, th_dot, x_dot, y_dot, x_ddot, y_ddot, x_dddot, y_dddot);
+    return TurtlebotState(x, y, th, v, th_dot, x_dot, y_dot, x_ddot, y_ddot);
 }
 
 const TurtlebotState Controller::getDesiredState()
@@ -290,49 +278,34 @@ const TurtlebotState Controller::integrateDesiredStateToCurrentTime(int &traj_it
     {
         traj_it++;
         dt = 0;
-    }
-    double acc_ang = 0;
-    acc_ang = (m_traj->yaw_rates[traj_it] - m_traj->yaw_rates[traj_it - 1]) / m_traj->durations[traj_it];
-    if(std::isnan(acc_ang) || std::isinf(acc_ang))
-    {
-        acc_ang = 0;
-    }
+    }   
+    const double &acc_ang = (m_traj->yaw_rates[traj_it] - m_traj->yaw_rates[traj_it - 1]) / m_traj->durations[traj_it];
     const double &th_dot = m_traj->yaw_rates[traj_it - 1] + acc_ang * dt;
     const double &th = m_traj->headings[traj_it - 1] + th_dot * dt + acc_ang * std::pow(dt, 2) / 2;
-    double jerk_x = 0;
-    double jerk_y = 0;
     double acc_x = 0;
     double acc_y = 0;
-    if(traj_it < m_traj->durations.size() - 4)
+    if(traj_it < m_traj->durations.size() - 2)
     {
-        const double &xp3 = m_traj->x_values[traj_it + 3];
-        const double &xp2 = m_traj->x_values[traj_it + 2];
-        const double &xp1 = m_traj->x_values[traj_it + 1];
-        const double &xp0 = m_traj->x_values[traj_it];
-        const double &vxp2 = (xp3 - xp2) / m_traj->durations[traj_it];
+        const double &xp2 = m_traj->x_values[traj_it + 1];
+        const double &xp1 = m_traj->x_values[traj_it];
+        const double &xp0 = m_traj->x_values[traj_it - 1];
         const double &vxp1 = (xp2 - xp1) / m_traj->durations[traj_it];
         const double &vxp0 = (xp1 - xp0) / m_traj->durations[traj_it];
-        const double &accxp1 = (vxp2 - vxp1) / m_traj->durations[traj_it];
         acc_x = (vxp1 - vxp0) / m_traj->durations[traj_it];
-        jerk_x = (accxp1 - acc_x) / m_traj->durations[traj_it];
-        const double &yp3 = m_traj->y_values[traj_it + 3];
-        const double &yp2 = m_traj->y_values[traj_it + 2];
-        const double &yp1 = m_traj->y_values[traj_it + 1];
-        const double &yp0 = m_traj->y_values[traj_it];
-        const double &vyp2 = (yp3 - yp2) / m_traj->durations[traj_it];
+        const double &yp2 = m_traj->y_values[traj_it + 1];
+        const double &yp1 = m_traj->y_values[traj_it];
+        const double &yp0 = m_traj->y_values[traj_it - 1];
         const double &vyp1 = (yp2 - yp1) / m_traj->durations[traj_it];
         const double &vyp0 = (yp1 - yp0) / m_traj->durations[traj_it];
-        const double &accyp1 = (vyp2 - vyp1) / m_traj->durations[traj_it];
         acc_y = (vyp1 - vyp0) / m_traj->durations[traj_it];
-        jerk_y = (accyp1 - acc_y) / m_traj->durations[traj_it];
     }
     const double &acc_lin = std::sqrt(std::pow(acc_x, 2) + std::pow(acc_y, 2));
     const double &v = m_traj->speeds[traj_it - 1] + acc_lin * dt;
     const double &v_x = v * cos(th);
     const double &v_y = v * sin(th);
-    const double &x = m_traj->x_values[traj_it - 1] + v_x * dt + acc_x * std::pow(dt, 2) / 2 + jerk_x * std::pow(dt, 3) / 6;
-    const double &y = m_traj->y_values[traj_it - 1] + v_y * dt + acc_y * std::pow(dt, 2) / 2 + jerk_y * std::pow(dt, 3) / 6;
-    return TurtlebotState(x, y, th, v, th_dot, v_x, v_y, acc_x, acc_y, jerk_x, jerk_y);
+    const double &x = m_traj->x_values[traj_it - 1] + v_x * dt + acc_x * std::pow(dt, 2) / 2;
+    const double &y = m_traj->y_values[traj_it - 1] + v_y * dt + acc_y * std::pow(dt, 2) / 2;
+    return TurtlebotState(x, y, th, v, th_dot, v_x, v_y, acc_x, acc_y);
 }
 
 void Controller::integratePoseToCurrentTime()
@@ -471,14 +444,9 @@ void Controller::dynamicReconfigureCallback(controller::ControllerConfig &config
             m_cont_type = Controller::DFL;
             m_cont_type = controller_type::DFL;
             m_dfl_cont = new DYNController();
-            m_dfl_cont->setGains(m_dfl_gains[0], m_dfl_gains[1], m_dfl_gains[2],
-                                 m_dfl_gains[3], m_dfl_gains[4], m_dfl_gains[5]);
+            m_dfl_cont->setGains(m_dfl_gains[0], m_dfl_gains[1]);
             config.lam0 = m_dfl_gains[0];
             config.lam1 = m_dfl_gains[1];
-            config.lam2 = m_dfl_gains[2];
-            config.gam0 = m_dfl_gains[3];
-            config.gam1 = m_dfl_gains[4];
-            config.gam2 = m_dfl_gains[5];
         }
     }
 }
