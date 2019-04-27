@@ -4,3 +4,4 @@ percent_to_average: 10
 sensor_var_x: 0.0001
 sensor_var_y: 0.0001
 sensor_var_yaw: 0.0001
+time_delay_compensation: 1

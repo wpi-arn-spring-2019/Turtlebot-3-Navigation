@@ -95,6 +95,8 @@ private:
     double m_percent_to_drop;
     double m_percent_to_average;
 
+    bool m_compensate;
+
 
 };
 

@@ -7,3 +7,4 @@ imu_var_thd: 0.00001
 odom_var_xd: 0.0001
 odom_var_yd: 0.0001
 odom_var_thd: 0.001
+time_delay_compensation: 1

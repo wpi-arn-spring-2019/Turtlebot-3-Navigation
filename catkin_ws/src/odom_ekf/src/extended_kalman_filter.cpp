@@ -23,6 +23,16 @@ void ExtendedKalmanFilter::initializeFilter(ros::NodeHandle &pnh)
     pnh.getParam("imu_var_xd", m_imu_covariance(3, 3));
     pnh.getParam("imu_var_yd", m_imu_covariance(4, 4));
     pnh.getParam("imu_var_thd", m_imu_covariance(5, 5));
+    int compensate;
+    pnh.getParam("time_delay_compensation", compensate);
+    if(compensate == 0)
+    {
+        m_compensate = false;
+    }
+    else
+    {
+        m_compensate = true;
+    }
     for(int diag = 0; diag < 6; diag++)
     {
         m_imu_covariance(diag, diag) = std::sqrt(m_imu_covariance(diag, diag));
@@ -202,6 +212,11 @@ void ExtendedKalmanFilter::calcCovariance(const Eigen::MatrixXf &cov_, const Eig
 
 void ExtendedKalmanFilter::integrateIMUToOdom()
 {
+    if(!m_compensate)
+    {
+        m_imu_at_odom = *m_imu;
+        return;
+    }
     const float &dt = ros::Duration(m_odom->header.stamp - m_imu->header.stamp).toSec();
     m_imu_at_odom.header.stamp = m_odom->header.stamp;
     float jerk_x = (m_imu->linear_acceleration.x - m_prev_imu->linear_acceleration.x) / dt;

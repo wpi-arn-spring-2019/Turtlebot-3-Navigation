@@ -18,6 +18,16 @@ Localization::Localization(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     pnh.getParam("sensor_var_x", m_sensor_var_x);
     pnh.getParam("sensor_var_y", m_sensor_var_y);
     pnh.getParam("sensor_var_yaw", m_sensor_var_yaw);
+    int compensate;
+    pnh.getParam("time_delay_compensation", compensate);
+    if(compensate == 0)
+    {
+        m_compensate = false;
+    }
+    else
+    {
+        m_compensate = true;
+    }
     std::srand(ros::Time::now().toSec());
 }
 
@@ -288,6 +298,10 @@ void Localization::pubParticles()
 
 void Localization::integratePoseToCurrentTime(tf::Pose &pose)
 {
+    if(!m_compensate)
+    {
+        return;
+    }
     ros::Duration dt = ros::Time::now() - m_odom_at_scan.header.stamp;
     const double &acc_ang = (m_odom_at_scan.twist.twist.angular.z - m_prev_odom->twist.twist.angular.z) / dt.toSec();
     const double &yaw = tf::getYaw(pose.getRotation());
@@ -358,6 +372,11 @@ std::vector<double> Localization::calcCovarianceMatrix()
 
 void Localization::integrateOdomToScanTime()
 {
+    if(!m_compensate)
+    {
+        m_odom_at_scan = *m_odom;
+        return;
+    }
     ros::Duration dt = m_scan->header.stamp - m_odom->header.stamp;
     m_odom_at_scan.header.stamp = m_scan->header.stamp;
     const double &acc_x = (m_odom->twist.twist.linear.x - m_prev_odom->twist.twist.linear.x) / dt.toSec();

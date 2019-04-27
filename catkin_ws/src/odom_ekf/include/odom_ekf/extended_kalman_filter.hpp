@@ -55,6 +55,8 @@ private:
     bool m_have_odom = false;
     bool m_have_imu = false;
 
+    bool m_compensate;
+
 
 };
 
