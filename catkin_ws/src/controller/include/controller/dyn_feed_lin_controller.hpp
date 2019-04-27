@@ -14,8 +14,8 @@ namespace Turtlebot
 class DYNController
 {
 public:
-    DYNController();
-    ~DYNController();
+    DYNController(){}
+    ~DYNController() = default;
     const geometry_msgs::TwistStamped getControls(const TurtlebotState &current_state, const TurtlebotState &desired_state);
     void setGains(const double &lam0_dyn_fed_lin, const double &lam1_dyn_fed_lin);
     turtlebot_msgs::cntrl_acc m_acc_error ;

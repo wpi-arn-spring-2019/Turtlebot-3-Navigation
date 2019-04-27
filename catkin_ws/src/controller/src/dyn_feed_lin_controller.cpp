@@ -3,17 +3,6 @@
 namespace Turtlebot
 {
 
-DYNController::DYNController()
-{
-
-
-}
-
-DYNController::~DYNController()
-{
-
-}
-
 const geometry_msgs::TwistStamped DYNController::getControls(const TurtlebotState &current_state, const TurtlebotState &desired_state)
 {
 
