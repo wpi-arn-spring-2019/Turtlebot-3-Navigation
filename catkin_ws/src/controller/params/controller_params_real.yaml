@@ -6,6 +6,12 @@
 
 controller_type: 0
 
+#time delay compenstaion
+#on 1
+#off 0
+
+time_delay_compensation: 1
+
 kp_w_pd: 5
 kd_w_pd: 0.5
 kp_v_pd: 5

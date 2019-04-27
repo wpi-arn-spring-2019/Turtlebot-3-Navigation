@@ -52,7 +52,7 @@ private:
     void getGains(ros::NodeHandle &pnh);
     const TurtlebotState getCurrentState();
     const TurtlebotState getDesiredState();
-    const TurtlebotState integrateDesiredStateToCurrentTime(const int &traj_it, const double &dt) const;
+    const TurtlebotState integrateDesiredStateToCurrentTime(int &traj_it, double &dt) const;
     void integratePoseToCurrentTime();
     void integrateOdomToCurrentTime();
 
@@ -94,6 +94,8 @@ private:
     PDFeedForwardController *m_pd_ff_cont;
     PIDFeedForwardController *m_pid_ff_cont;
     DYNController *m_dfl_cont;
+
+    bool m_compensate;
 
     double m_rate;
 
