@@ -10,6 +10,11 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &
     m_odom_sub = nh.subscribe<nav_msgs::Odometry>("/odom/filtered", 10, &Controller::odomCallback, this);
     m_goal_reached_sub = nh.subscribe<std_msgs::Bool>("/goal_reached", 10, &Controller::goalReachedCallback, this);
     m_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+    m_error_pos_pub = nh.advertise<turtlebot_msgs::cntrl_pos>("/error_pos_pub", 10);
+    m_error_vel_pub = nh.advertise<turtlebot_msgs::cntrl_vel>("/error_vel_pub", 10);
+    m_error_acc_pub = nh.advertise<turtlebot_msgs::cntrl_acc>("/error_acc_pub", 10);
+    m_error_lin_vel_pub = nh.advertise<turtlebot_msgs::cntrl_lin_vel>("/error_lin_vel_pub", 10);
+    m_error_ang_vel_pub = nh.advertise<turtlebot_msgs::cntrl_ang_vel>("/error_ang_vel_pub", 10);
     m_call_type = boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2);
     m_server = new dynamic_reconfigure::Server<controller::ControllerConfig>(m_config_mutex);
     m_kp_gains_w.resize(5);
@@ -21,13 +26,6 @@ Controller::Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &
     m_dfl_gains.resize(2);
     m_server->setCallback(m_call_type);
     initializeController(pnh);
-
-    m_error_pos_pub = nh.advertise<turtlebot_msgs::cntrl_pos>("/error_pos_pub", 10);
-    m_error_vel_pub = nh.advertise<turtlebot_msgs::cntrl_vel>("/error_vel_pub", 10);
-    m_error_acc_pub = nh.advertise<turtlebot_msgs::cntrl_acc>("/error_acc_pub", 10);
-    m_error_lin_vel_pub = nh.advertise<turtlebot_msgs::cntrl_lin_vel>("/error_lin_vel_pub", 10);
-    m_error_ang_vel_pub = nh.advertise<turtlebot_msgs::cntrl_ang_vel>("/error_ang_vel_pub", 10);
-
 }
 
 Controller::~Controller()
@@ -169,53 +167,47 @@ void Controller::control()
         {
         case PD:
             pubControls(m_pd_cont->getControls(current_state, desired_state));
-
             m_error_pos_pub.publish(m_pd_cont->m_pos_error);
             m_error_vel_pub.publish(m_pd_cont->m_vel_error);
             m_error_acc_pub.publish(m_pd_cont->m_acc_error);
             m_error_lin_vel_pub.publish(m_pd_cont->m_lin_vel_error);
             m_error_ang_vel_pub.publish(m_pd_cont->m_ang_vel_error);
-
             break;
+
         case PID:
             pubControls(m_pid_cont->getControls(current_state, desired_state));
-
             m_error_pos_pub.publish(m_pid_cont->m_pos_error);
             m_error_vel_pub.publish(m_pid_cont->m_vel_error);
             m_error_acc_pub.publish(m_pid_cont->m_acc_error);
             m_error_lin_vel_pub.publish(m_pid_cont->m_lin_vel_error);
             m_error_ang_vel_pub.publish(m_pid_cont->m_ang_vel_error);
-
             break;
+
         case PD_FF:
             pubControls(m_pd_ff_cont->getControls(current_state, desired_state));
-
             m_error_pos_pub.publish(m_pd_ff_cont->m_pos_error);
             m_error_vel_pub.publish(m_pd_ff_cont->m_vel_error);
             m_error_acc_pub.publish(m_pd_ff_cont->m_acc_error);
             m_error_lin_vel_pub.publish(m_pd_ff_cont->m_lin_vel_error);
             m_error_ang_vel_pub.publish(m_pd_ff_cont->m_ang_vel_error);
-
             break;
+
         case PID_FF:
             pubControls(m_pid_ff_cont->getControls(current_state, desired_state));
-
             m_error_pos_pub.publish(m_pid_ff_cont->m_pos_error);
             m_error_vel_pub.publish(m_pid_ff_cont->m_vel_error);
             m_error_acc_pub.publish(m_pid_ff_cont->m_acc_error);
             m_error_lin_vel_pub.publish(m_pid_ff_cont->m_lin_vel_error);
             m_error_ang_vel_pub.publish(m_pid_ff_cont->m_ang_vel_error);
-
             break;
+
         case DFL:
             pubControls(m_dfl_cont->getControls(current_state, desired_state));
-
             m_error_pos_pub.publish(m_dfl_cont->m_pos_error);
             m_error_vel_pub.publish(m_dfl_cont->m_vel_error);
             m_error_acc_pub.publish(m_dfl_cont->m_acc_error);
             m_error_lin_vel_pub.publish(m_dfl_cont->m_lin_vel_error);
             m_error_ang_vel_pub.publish(m_dfl_cont->m_ang_vel_error);
-
             break;
         }
     }

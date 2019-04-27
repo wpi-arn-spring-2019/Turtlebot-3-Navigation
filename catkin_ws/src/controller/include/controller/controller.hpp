@@ -29,14 +29,7 @@ class Controller
 public:
     Controller(ros::NodeHandle &nh, ros::NodeHandle &pnh, const double &rate);
     ~Controller();
-    void control();
-
-
-    ros::Publisher m_error_pos_pub;
-    ros::Publisher m_error_vel_pub;
-    ros::Publisher m_error_acc_pub;
-    ros::Publisher m_error_lin_vel_pub;
-    ros::Publisher m_error_ang_vel_pub;
+    void control();  
 
 
 private:
@@ -61,6 +54,11 @@ private:
     ros::Subscriber m_odom_sub;
     ros::Subscriber m_goal_reached_sub;
     ros::Publisher m_vel_pub;
+    ros::Publisher m_error_pos_pub;
+    ros::Publisher m_error_vel_pub;
+    ros::Publisher m_error_acc_pub;
+    ros::Publisher m_error_lin_vel_pub;
+    ros::Publisher m_error_ang_vel_pub;
 
     dynamic_reconfigure::Server<controller::ControllerConfig> *m_server;
     dynamic_reconfigure::Server<controller::ControllerConfig>::CallbackType m_call_type;
