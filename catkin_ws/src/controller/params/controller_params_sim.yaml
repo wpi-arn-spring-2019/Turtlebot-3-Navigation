@@ -36,5 +36,5 @@ kp_v_pid_ff: 0.0025
 ki_v_pid_ff: 0.0001
 kd_v_pid_ff: 0.0025
 
-lam0_dyn_fed_lin: 1.25
-lam1_dyn_fed_lin: 1.15
+lam0_dyn_fed_lin: 0.85
+lam1_dyn_fed_lin: 0.65
