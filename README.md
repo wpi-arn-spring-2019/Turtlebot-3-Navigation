@@ -17,4 +17,6 @@ note: real robot is configured to load custom real map, change this in real_robo
 
 give a 2d pose estimate in rviz, then a 2d nav goal
 
+controller code is in catkin_ws/src/controller
+
 use rqt_reconfigure to change controller types and further tune gains
