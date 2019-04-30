@@ -4,7 +4,7 @@
 #PID_FF: 3
 #DFL: 4
 
-controller_type: 4
+controller_type: 3
 
 #time delay compenstaion
 #on 1
